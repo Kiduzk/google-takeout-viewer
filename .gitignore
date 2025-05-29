@@ -1,3 +1,5 @@
 /backend/testing.db
 /backend/__pycache__
+/backend/search-history.html
+/backend/watch-history.html
 venv
