@@ -2,19 +2,115 @@ from bs4 import BeautifulSoup
 import re 
 import sqlite3
 import logging
+import msgspec
+from datetime import datetime, timezone
 
 logging.basicConfig(
     level=logging.INFO,  # or DEBUG, WARNING, ERROR, CRITICAL
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 
-
-
 class Parser:
     def __init__(self, database):
         self.database = database
         self.conn = sqlite3.connect(database)
         self.cursor = self.conn.cursor()
+    
+    def parse_youtube_watch_history_json(self, file_name):
+        logging.info("Parsing youtube watch history (json version)...")
+
+        self.cursor.execute('''
+        CREATE TABLE IF NOT EXISTS youtube_watch_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT,
+            link TEXT,
+            date TEXT, 
+            UNIQUE(title, link, date)
+        )''')
+
+
+        with open(file_name, encoding="utf-8") as file:
+            data = file.read()
+
+        decoded_data = msgspec.json.decode(data)
+        watchced_videos = []
+
+        for entry in decoded_data:
+            title = entry["title"]
+            try:
+                link = entry["titleUrl"]
+            except KeyError:
+                continue
+
+            iso_time  = entry["time"]
+            ts = iso_time.replace("Z", "+00:00")
+            dt = datetime.fromisoformat(ts)
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            tz_raw = dt.strftime("%z")
+            tz_formatted = tz_raw[:3] + ":" + tz_raw[3:]
+            date = dt.strftime(f"%d %b %Y, %H:%M:%S GMT{tz_formatted}")
+
+            watchced_videos.append((title, link, date))
+        
+        self.conn.executemany('''
+        INSERT OR REPLACE INTO youtube_watch_history (title, link, date)
+        VALUES (?, ?, ?)
+        ''', watchced_videos)
+
+        self.conn.commit()
+        logging.info("Done")
+
+    def parse_youtube_search_history_json(self, file_name):
+        logging.info("Parsing youtube search history (json version)...")
+
+        self.cursor.execute('''
+        CREATE TABLE IF NOT EXISTS youtube_search_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT,
+            link TEXT,
+            date TEXT, 
+            UNIQUE(title, link, date)
+        )''')
+
+        with open(file_name, encoding="utf-8") as file:
+            data = file.read()
+
+        decoded_data = msgspec.json.decode(data)
+        search_history = []
+
+        for entry in decoded_data:
+            title = entry["title"]
+            link = entry["titleUrl"]
+            iso_time  = entry["time"]
+
+            # TODO: for now, we ignore add views. But it might be cool to also see some stats on 
+            #        ads watched
+            if "details" in entry and entry["details"][0]["name"] == "From Google Ads":
+                continue
+
+            ts = iso_time.replace("Z", "+00:00")
+            dt = datetime.fromisoformat(ts)
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            tz_raw = dt.strftime("%z")
+            tz_formatted = tz_raw[:3] + ":" + tz_raw[3:]
+            date = dt.strftime(f"%d %b %Y, %H:%M:%S GMT{tz_formatted}")
+
+            search_history.append((title, link, date))
+        
+        self.conn.executemany('''
+        INSERT OR REPLACE INTO youtube_search_history (title, link, date)
+        VALUES (?, ?, ?)
+        ''', search_history)
+
+        self.conn.commit()
+        logging.info("Done")
+
+
+
+
+        pass
     
     def parse_youtube_watch_history_html(self, file_name):
         logging.info("Parsing youtube watch history (html version)...")
@@ -24,7 +120,8 @@ class Parser:
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             title TEXT,
             link TEXT,
-            date TEXT 
+            date TEXT,
+            UNIQUE(title, link, date)
         )''')
 
         with open(file_name, encoding="utf-8") as file:
@@ -80,7 +177,8 @@ class Parser:
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             title TEXT,
             link TEXT,
-            date TEXT 
+            date TEXT,
+            UNIQUE(title, link, date)
         )''')
 
 
@@ -138,7 +236,9 @@ class Parser:
 if __name__ == "__main__":
    logging.info("Started app")
    parser = Parser("testing.db")
+#    parser.parse_youtube_watch_history_json("watch-history.json")
+   parser.parse_youtube_search_history_json("search-history.json")
 #    parser.parse_youtube_search_history_html("search-history.html") 
-   parser.parse_youtube_watch_history_html("watch-history.html") 
+#    parser.parse_youtube_watch_history_html("watch-history.html") 
 
    parser.close()
