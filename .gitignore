@@ -4,4 +4,6 @@
 /backend/watch-history.html
 /backend/search-history.json
 /backend/watch-history.json
+env
 venv
+.python-version
