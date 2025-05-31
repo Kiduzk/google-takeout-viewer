@@ -2,4 +2,6 @@
 /backend/__pycache__
 /backend/search-history.html
 /backend/watch-history.html
+/backend/search-history.json
+/backend/watch-history.json
 venv
