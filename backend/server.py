@@ -28,7 +28,7 @@ def read_youtube_watch_history():
             }
         )
     
-    return youtube_watch_history[:100]
+    return youtube_watch_history
 
 
 @app.get("/items/{item_id}")
