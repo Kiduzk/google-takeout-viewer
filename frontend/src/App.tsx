@@ -11,6 +11,15 @@ interface YoutubeVideo {
   details: string[];
 }
 
+interface YoutubeComment {
+  id: number,
+  videoId: string,
+  channelId: string,
+  text: string,
+  time: string,
+
+}
+
 const GoogleTakeoutViewer = () => {
   const [activeTab, setActiveTab] = useState('youtube-watch');
   const [searchQuery, setSearchQuery] = useState('');
@@ -27,49 +36,39 @@ const GoogleTakeoutViewer = () => {
   const [youtubeSearchData, setYoutubeSearchData] = useState<YoutubeVideo[]>([]);
   const [youtubeWatchData, setYoutubeWatchData] = useState<YoutubeVideo[]>([]);
 
+  const [commentsData, setCommentsData] = useState<YoutubeComment[]>([]);
+  const [commentsDataLoading, setCommentsDataLoading] = useState(true);
+
   useEffect(() => {
     const get_youtube_history = async () => {
       try {
-        const result = await axios.get("http://127.0.0.1:8000/youtube_history");
-
+        // Youtube watch + search history
+        let result = await axios.get("http://127.0.0.1:8000/youtube_history");
         let data_no_ads = result.data.filter(
           (video: YoutubeVideo) => video.details[0] != "From Google Ads"
         )
-
         // for now I am exlcuidng ads, but we can always get them back
         setYoutubeWatchData(data_no_ads.filter(
           (video: YoutubeVideo) => video.title.toLowerCase().includes("watched")
         ));
-
         setYoutubeSearchData(data_no_ads.filter(
           (video: YoutubeVideo) => video.title.toLowerCase().includes("searched")
         ))
+
+        // Youtube comment history
+        result = await axios.get("http://127.0.0.1:8000/youtube_comments");
+        setCommentsData(result.data)
 
       } catch (err) {
         console.log(err);
       } finally {
         setYoutubeDataLoading(false);
+        setCommentsDataLoading(false);
       }
     }
     get_youtube_history();
   }, [])
 
-  const commentsData = [
-    {
-      id: 1,
-      text: "This is exactly what I needed! Thanks for the detailed explanation.",
-      video: "Advanced JavaScript Patterns",
-      channel: "JS Academy",
-      timestamp: "2024-12-10T16:20:00Z"
-    },
-    {
-      id: 2,
-      text: "Could you make a follow-up video about async/await patterns?",
-      video: "Promise Chains in Modern JS",
-      channel: "CodeLab",
-      timestamp: "2024-12-08T11:30:00Z"
-    }
-  ];
 
   const keepNotesData = [
     {
@@ -328,7 +327,7 @@ const GoogleTakeoutViewer = () => {
     </div>
   );
 
-  const CommentCard = ({ comment }) => (
+  const CommentCard = ({ comment } : { comment: YoutubeComment }) => (
     <div className={`border rounded-xl p-6 hover:shadow-lg transition-all duration-200 ${
       darkMode 
         ? 'bg-gray-800 border-gray-700 hover:border-gray-600' 
@@ -343,14 +342,14 @@ const GoogleTakeoutViewer = () => {
             {comment.text}
           </p>
           <div className={`text-sm mb-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-            On: <span className="font-medium">{comment.video}</span>
+            On: <span className="font-medium">{comment.videoId}</span>
           </div>
           <div className="flex items-center justify-between">
             <span className={`text-sm ${darkMode ? 'text-gray-500' : 'text-gray-500'}`}>
-              {comment.channel}
+              {comment.channelId}
             </span>
             <span className={`text-sm ${darkMode ? 'text-gray-500' : 'text-gray-500'}`}>
-              {formatDate(comment.timestamp)}
+              {formatDate(comment.time)}
             </span>
           </div>
         </div>
@@ -552,7 +551,8 @@ const GoogleTakeoutViewer = () => {
             <YouTubeCard key={video.id} video={video} />
           ))}
          
-          {activeTab === 'comments' && commentsData.map(comment => (
+          {activeTab === 'comments' && 
+          !commentsDataLoading && commentsData.map(comment => (
             <CommentCard key={comment.id} comment={comment} />
           ))}
           
