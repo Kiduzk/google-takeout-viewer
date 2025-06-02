@@ -1,9 +1,18 @@
 import './App.css'
-import { useState } from 'react';
-import { Search, Play, MessageCircle, StickyNote, Calendar, Filter, Eye, Clock, Hash, Moon, Sun, X, Tag } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Search, Play, MessageCircle, StickyNote, Calendar, Filter, Eye, Clock, Hash, Moon, Sun, X, Tag, SquaresExclude } from 'lucide-react';
+import axios from 'axios';
+
+interface YoutubeVideo {
+  id: number;
+  title: string;
+  titleUrl: string;
+  time: string;
+  details: string[];
+}
 
 const GoogleTakeoutViewer = () => {
-  const [activeTab, setActiveTab] = useState('youtube');
+  const [activeTab, setActiveTab] = useState('youtube-watch');
   const [searchQuery, setSearchQuery] = useState('');
   const [filterOpen, setFilterOpen] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
@@ -14,46 +23,36 @@ const GoogleTakeoutViewer = () => {
     labels: [],
     contentType: 'all'
   });
+  const [youtubeDataLoading, setYoutubeDataLoading] = useState(true);
+  const [youtubeSearchData, setYoutubeSearchData] = useState<YoutubeVideo[]>([]);
+  const [youtubeWatchData, setYoutubeWatchData] = useState<YoutubeVideo[]>([]);
 
-  // Sample data with more variety for filtering
-  const youtubeData = [
-    {
-      id: 1,
-      title: "How to Build React Components Like a Pro",
-      channel: "TechMastery",
-      watchedAt: "2024-12-15T14:30:00Z",
-      duration: "24:15",
-      url: "https://youtube.com/watch?v=abc123",
-      category: "Education"
-    },
-    {
-      id: 2,
-      title: "The Future of Web Development in 2025",
-      channel: "CodeCraft",
-      watchedAt: "2024-12-14T09:15:00Z",
-      duration: "18:42",
-      url: "https://youtube.com/watch?v=def456",
-      category: "Technology"
-    },
-    {
-      id: 3,
-      title: "Minimalist Workspace Setup Tour",
-      channel: "DesignSpace",
-      watchedAt: "2024-12-13T20:45:00Z",
-      duration: "12:30",
-      url: "https://youtube.com/watch?v=ghi789",
-      category: "Lifestyle"
-    },
-    {
-      id: 4,
-      title: "JavaScript Performance Optimization",
-      channel: "TechMastery",
-      watchedAt: "2024-12-12T16:20:00Z",
-      duration: "31:22",
-      url: "https://youtube.com/watch?v=jkl012",
-      category: "Education"
+  useEffect(() => {
+    const get_youtube_history = async () => {
+      try {
+        const result = await axios.get("http://127.0.0.1:8000/youtube_history");
+
+        let data_no_ads = result.data.filter(
+          (video: YoutubeVideo) => video.details[0] != "From Google Ads"
+        )
+
+        // for now I am exlcuidng ads, but we can always get them back
+        setYoutubeWatchData(data_no_ads.filter(
+          (video: YoutubeVideo) => video.title.toLowerCase().includes("watched")
+        ));
+
+        setYoutubeSearchData(data_no_ads.filter(
+          (video: YoutubeVideo) => video.title.toLowerCase().includes("searched")
+        ))
+
+      } catch (err) {
+        console.log(err);
+      } finally {
+        setYoutubeDataLoading(false);
+      }
     }
-  ];
+    get_youtube_history();
+  }, [])
 
   const commentsData = [
     {
@@ -99,7 +98,7 @@ const GoogleTakeoutViewer = () => {
     }
   ];
 
-  const formatDate = (dateString) => {
+  const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
@@ -109,9 +108,6 @@ const GoogleTakeoutViewer = () => {
     });
   };
 
-  const getUniqueChannels = () => {
-    return [...new Set(youtubeData.map(video => video.channel))];
-  };
 
   const getUniqueLabels = () => {
     return [...new Set(keepNotesData.flatMap(note => note.labels))];
@@ -181,36 +177,6 @@ const GoogleTakeoutViewer = () => {
                 {activeTab === 'youtube' && <option value="duration">By Duration</option>}
               </select>
             </div>
-
-            {/* Channel Filter (YouTube only) */}
-            {activeTab === 'youtube' && (
-              <div>
-                <label className="block text-sm font-medium mb-3 text-gray-300">
-                  Channels
-                </label>
-                <div className="space-y-2 max-h-32 overflow-y-auto">
-                  {getUniqueChannels().map((channel) => (
-                    <label key={channel} className="flex items-center">
-                      <input
-                        type="checkbox"
-                        checked={filters.channels.includes(channel)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setFilters({...filters, channels: [...filters.channels, channel]});
-                          } else {
-                            setFilters({...filters, channels: filters.channels.filter(c => c !== channel)});
-                          }
-                        }}
-                        className="mr-3 text-blue-600"
-                      />
-                      <span className="text-sm text-gray-300">
-                        {channel}
-                      </span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-            )}
 
             {/* Labels Filter (Keep Notes only) */}
             {activeTab === 'notes' && (
@@ -322,7 +288,7 @@ const GoogleTakeoutViewer = () => {
       <Search className={`absolute left-4 top-1/2 transform -translate-y-1/2 ${darkMode ? 'text-gray-400' : 'text-gray-400'}`} size={20} />
       <input
         type="text"
-        placeholder={`Search through your ${activeTab === 'youtube' ? 'watch history' : activeTab === 'comments' ? 'comments' : 'notes'}...`}
+        placeholder={`Search through your ${activeTab === 'youtube-watch' ? 'YouTube watch history' : activeTab === 'youtube-search' ? 'YouTube search history' : activeTab === 'comments' ? 'YouTube comments' : 'notes'}...`}
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
         className={`w-full pl-12 pr-4 py-4 border rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg ${
@@ -334,7 +300,7 @@ const GoogleTakeoutViewer = () => {
     </div>
   );
 
-  const YouTubeCard = ({ video }) => (
+  const YouTubeCard = ({ video }: { video: YoutubeVideo }) => (
     <div className={`border rounded-xl p-6 hover:shadow-lg transition-all duration-200 hover:border-gray-300 ${
       darkMode 
         ? 'bg-gray-800 border-gray-700 hover:border-gray-600' 
@@ -348,23 +314,14 @@ const GoogleTakeoutViewer = () => {
           <h3 className={`font-semibold text-lg mb-2 line-clamp-2 ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>
             {video.title}
           </h3>
-          <div className={`flex items-center gap-4 text-sm mb-3 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-            <span className="flex items-center gap-1">
-              <Hash size={14} />
-              {video.channel}
-            </span>
-            <span className="flex items-center gap-1">
-              <Clock size={14} />
-              {video.duration}
-            </span>
-          </div>
+          
           <div className="flex items-center justify-between">
             <span className={`text-sm ${darkMode ? 'text-gray-500' : 'text-gray-500'}`}>
-              {formatDate(video.watchedAt)}
+              {formatDate(video.time)}
             </span>
-            <button className="text-blue-600 hover:text-blue-700 font-medium text-sm">
+            <a href={video.titleUrl} target="_blank" className="text-blue-600 hover:text-blue-700 font-medium text-sm">
               View on YouTube
-            </button>
+            </a>
           </div>
         </div>
       </div>
@@ -503,7 +460,8 @@ const GoogleTakeoutViewer = () => {
       <div className="max-w-7xl mx-auto px-6 py-8">
         {/* Navigation Tabs */}
         <div className="flex gap-4 mb-8">
-          <TabButton id="youtube" label="Watch History" icon={Play} count={youtubeData.length} />
+          <TabButton id="youtube-watch" label="Watch History" icon={Play} count={youtubeWatchData.length} />
+          <TabButton id="youtube-search" label="Search History" icon={Search} count={youtubeSearchData.length} />
           <TabButton id="comments" label="Comments" icon={MessageCircle} count={commentsData.length} />
           <TabButton id="notes" label="Keep Notes" icon={StickyNote} count={keepNotesData.length} />
         </div>
@@ -580,10 +538,20 @@ const GoogleTakeoutViewer = () => {
 
         {/* Content */}
         <div className="space-y-6">
-          {activeTab === 'youtube' && youtubeData.map(video => (
+          {activeTab === 'youtube-watch' &&
+           !youtubeDataLoading && youtubeWatchData
+          .slice(0, 20)
+          .map((video: YoutubeVideo) => (
             <YouTubeCard key={video.id} video={video} />
           ))}
-          
+
+          {activeTab === 'youtube-search' &&
+           !youtubeDataLoading && youtubeSearchData
+          .slice(0, 20)
+          .map((video: YoutubeVideo) => (
+            <YouTubeCard key={video.id} video={video} />
+          ))}
+         
           {activeTab === 'comments' && commentsData.map(comment => (
             <CommentCard key={comment.id} comment={comment} />
           ))}
@@ -604,7 +572,8 @@ const GoogleTakeoutViewer = () => {
               <Calendar className="text-blue-600" size={24} />
               <div>
                 <p className={`text-2xl font-bold ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>
-                  {activeTab === 'youtube' ? youtubeData.length : 
+                  {activeTab === 'youtube-search' ? youtubeSearchData.length : 
+                   activeTab === 'youtube-watch' ? youtubeWatchData.length : 
                    activeTab === 'comments' ? commentsData.length : 
                    keepNotesData.length}
                 </p>
