@@ -35,7 +35,8 @@ def read_youtube_comments():
             {
                 "id": id,
                 "videoId": comment.videoId,
-                "channelID": comment.channelId,
+                "channelId": comment.channelId,
+                "commentId": comment.commentId,
                 "text": text,
                 "time": comment.dt,
             }
