@@ -21,6 +21,28 @@ interface YoutubeComment {
 
 }
 
+const SearchBar = ( {searchQuery, setSearchQuery, activeTab, darkMode } : {
+    searchQuery: string,
+    setSearchQuery: (value: string) => void,
+    activeTab: string,
+    darkMode: boolean
+  } ) => (
+  <div className="relative">
+    <Search className={`absolute left-4 top-1/2 transform -translate-y-1/2 ${darkMode ? 'text-gray-400' : 'text-gray-400'}`} size={20} />
+    <input
+      type="text"
+      placeholder={`Search through your ${activeTab === 'youtube-watch' ? 'YouTube watch history' : activeTab === 'youtube-search' ? 'YouTube search history' : activeTab === 'comments' ? 'YouTube comments' : 'notes'}...`}
+      value={searchQuery}
+      onChange={(e) => setSearchQuery(e.target.value)}
+      className={`w-full pl-12 pr-4 py-4 border rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg ${
+        darkMode 
+          ? 'bg-gray-800 border-gray-700 text-gray-100 placeholder-gray-400' 
+          : 'bg-white border-gray-200 text-gray-900'
+      }`}
+    />
+  </div>
+);
+
 const GoogleTakeoutViewer = () => {
   const [activeTab, setActiveTab] = useState('youtube-watch');
   const [searchQuery, setSearchQuery] = useState('');
@@ -283,23 +305,7 @@ const GoogleTakeoutViewer = () => {
     </button>
   );
 
-  const SearchBar = () => (
-    <div className="relative">
-      <Search className={`absolute left-4 top-1/2 transform -translate-y-1/2 ${darkMode ? 'text-gray-400' : 'text-gray-400'}`} size={20} />
-      <input
-        type="text"
-        placeholder={`Search through your ${activeTab === 'youtube-watch' ? 'YouTube watch history' : activeTab === 'youtube-search' ? 'YouTube search history' : activeTab === 'comments' ? 'YouTube comments' : 'notes'}...`}
-        value={searchQuery}
-        onChange={(e) => setSearchQuery(e.target.value)}
-        className={`w-full pl-12 pr-4 py-4 border rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg ${
-          darkMode 
-            ? 'bg-gray-800 border-gray-700 text-gray-100 placeholder-gray-400' 
-            : 'bg-white border-gray-200 text-gray-900'
-        }`}
-      />
-    </div>
-  );
-
+  
   const YouTubeCard = ({ video }: { video: YoutubeVideo }) => (
     <div className={`border rounded-xl p-6 hover:shadow-lg transition-all duration-200 hover:border-gray-300 ${
       darkMode 
@@ -466,7 +472,7 @@ const GoogleTakeoutViewer = () => {
 
         {/* Search Bar */}
         <div className="mb-8">
-          <SearchBar />
+          <SearchBar searchQuery={searchQuery} setSearchQuery={setSearchQuery} activeTab={activeTab} darkMode={darkMode} />
           
           {/* Active Filters Display */}
           {(filters.channels.length > 0 || filters.labels.length > 0 || filters.dateRange !== 'all' || filters.contentType !== 'all') && (
@@ -537,21 +543,32 @@ const GoogleTakeoutViewer = () => {
         {/* Content */}
         <div className="space-y-6">
           {activeTab === 'youtube-watch' &&
-           !youtubeDataLoading && youtubeWatchData
+          !youtubeDataLoading && youtubeWatchData
+          .filter(
+            (video: YoutubeVideo) => video.title.toLowerCase().includes(searchQuery.toLowerCase())
+          )
           .slice(0, 20)
           .map((video: YoutubeVideo) => (
             <YouTubeCard key={video.id} video={video} />
           ))}
 
           {activeTab === 'youtube-search' &&
-           !youtubeDataLoading && youtubeSearchData
+          !youtubeDataLoading && youtubeSearchData
+          .filter(
+            (video: YoutubeVideo) => video.title.toLowerCase().includes(searchQuery.toLowerCase())
+          )
           .slice(0, 20)
           .map((video: YoutubeVideo) => (
             <YouTubeCard key={video.id} video={video} />
           ))}
          
           {activeTab === 'comments' && 
-          !commentsDataLoading && commentsData.map(comment => (
+          
+          !commentsDataLoading && commentsData
+          .filter(
+            (comment: YoutubeComment) => comment.text.toLowerCase().includes(searchQuery.toLowerCase())
+          )
+          .map(comment => (
             <CommentCard key={comment.id} comment={comment} />
           ))}
           
