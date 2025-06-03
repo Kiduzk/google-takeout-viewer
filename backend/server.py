@@ -3,7 +3,7 @@ from typing import Union
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from google_takeout_parser.path_dispatch import TakeoutParser
-from google_takeout_parser.models import Activity, CSVYoutubeComment
+from google_takeout_parser.models import Activity, CSVYoutubeComment, Keep
 
 PATH = r"C:\previous_computer_files_and_backups\summer_2025_googletakeout\json_version\takeout-20250529T162908Z-2-001\Takeout"
 tp = TakeoutParser(PATH)
@@ -65,6 +65,34 @@ def read_youtube_history():
         id += 1
     
     return youtube_history
+
+@app.get("/google_keep")
+def read_keep():
+
+    # TODO: if i try to get caching i get an error regaruding subscripted genrics. 
+    #        Might be worth looking in the future if reading keep files gets slower
+    results = list(tp.parse(cache=False, filter_type=Keep))
+    keep_notes = []
+    id = 0
+    for entry in results:
+        keep_notes.append(
+            {
+                "id": id,
+                "title": entry.title,
+                "userEditedTimestampUsec": entry.userEditedTimestampUsec,
+                "createdTimestampUsec": entry.createdTimestampUsec,
+                "listContent":entry.listContent,
+                "textContent":entry.textContent,
+                "textContentHtml": entry.textContentHtml,
+                "color": entry.color,
+                "annotations": entry.annotations, 
+                "isTrashed": entry.isTrashed,
+                "isPinned": entry.isPinned,
+                "isArchived": entry.isArchived
+            }
+        )
+        id += 1
+    return keep_notes[:50] 
 
 @app.get("/items/{item_id}")
 def read_item(item_id: int, q: Union[str, None] = None):
