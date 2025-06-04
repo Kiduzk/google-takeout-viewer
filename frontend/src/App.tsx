@@ -18,7 +18,35 @@ interface YoutubeComment {
   commentId: string,
   text: string,
   time: string,
+}
 
+interface KeepListContent {
+    textHtml: string,
+    text: string,
+    isChecked: boolean
+}
+
+interface KeepAnnotation {
+    description: string,
+    source: string,
+    title: string,
+    url: string
+}
+
+
+interface KeepsEntry {
+  id: number,
+  title: string,
+  userEditedTimestampUsec: string, 
+  createdTimestampUsec: string,
+  listContent: KeepListContent[],
+  textContent: string,
+  textContentHtml: string,
+  color: string,
+  annotations: KeepAnnotation[],
+  isTrashed: boolean,
+  isPinned: boolean
+  isArchived: boolean
 }
 
 const SearchBar = ( {searchQuery, setSearchQuery, activeTab, darkMode } : {
@@ -47,7 +75,7 @@ const GoogleTakeoutViewer = () => {
   const [activeTab, setActiveTab] = useState('youtube-watch');
   const [searchQuery, setSearchQuery] = useState('');
   const [filterOpen, setFilterOpen] = useState(false);
-  const [darkMode, setDarkMode] = useState(false);
+  const [darkMode, setDarkMode] = useState(true);
   const [filters, setFilters] = useState({
     dateRange: 'all',
     sortBy: 'newest',
@@ -61,6 +89,9 @@ const GoogleTakeoutViewer = () => {
 
   const [commentsData, setCommentsData] = useState<YoutubeComment[]>([]);
   const [commentsDataLoading, setCommentsDataLoading] = useState(true);
+
+  const [keepsData, setKeepsData] = useState<KeepsEntry[]>([]);
+  const [keepsDataLoading, setKeepsDataLoading] = useState(true)
 
   useEffect(() => {
     const get_youtube_history = async () => {
@@ -82,43 +113,21 @@ const GoogleTakeoutViewer = () => {
         result = await axios.get("http://127.0.0.1:8000/youtube_comments");
         setCommentsData(result.data)
 
+        // Keeps data
+        result = await axios.get("http://127.0.0.1:8000/google_keep");
+        setKeepsData(result.data)
+
       } catch (err) {
         console.log(err);
       } finally {
         setYoutubeDataLoading(false);
         setCommentsDataLoading(false);
+        setKeepsDataLoading(false);
       }
     }
     get_youtube_history();
   }, [])
 
-
-  const keepNotesData = [
-    {
-      id: 1,
-      title: "Project Ideas",
-      content: "• Google Takeout viewer app\n• Personal finance tracker\n• Reading list organizer",
-      createdAt: "2024-12-12T10:15:00Z",
-      labels: ["dev", "projects"],
-      isPinned: true
-    },
-    {
-      id: 2,
-      title: "Meeting Notes - Q4 Planning",
-      content: "Key objectives:\n- Launch new feature set\n- Improve user onboarding\n- Expand team by 2 engineers",
-      createdAt: "2024-12-11T14:00:00Z",
-      labels: ["work", "meetings"],
-      isPinned: false
-    },
-    {
-      id: 3,
-      title: "Book Recommendations",
-      content: "• Atomic Habits - James Clear\n• The Pragmatic Programmer\n• System Design Interview",
-      createdAt: "2024-12-09T19:30:00Z",
-      labels: ["books", "personal"],
-      isPinned: false
-    }
-  ];
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -130,10 +139,6 @@ const GoogleTakeoutViewer = () => {
     });
   };
 
-
-  const getUniqueLabels = () => {
-    return [...new Set(keepNotesData.flatMap(note => note.labels))];
-  };
 
   const FilterPanel = () => (
     <div 
@@ -201,7 +206,7 @@ const GoogleTakeoutViewer = () => {
             </div>
 
             {/* Labels Filter (Keep Notes only) */}
-            {activeTab === 'notes' && (
+            {/* {activeTab === 'notes' && (
               <div>
                 <label className="block text-sm font-medium mb-3 text-gray-300">
                   Labels
@@ -229,7 +234,7 @@ const GoogleTakeoutViewer = () => {
                   ))}
                 </div>
               </div>
-            )}
+            )} */}
 
             {/* Content Type Filter (Keep Notes) */}
             {activeTab === 'notes' && (
@@ -306,7 +311,7 @@ const GoogleTakeoutViewer = () => {
   );
 
   
-  const YouTubeCard = ({ video }: { video: YoutubeVideo }) => (
+  const YouTubeCard = ({ video, cardType }: { video: YoutubeVideo, cardType: string  }) => (
     <div className={`border rounded-xl p-6 hover:shadow-lg transition-all duration-200 hover:border-gray-300 ${
       darkMode 
         ? 'bg-gray-800 border-gray-700 hover:border-gray-600' 
@@ -314,7 +319,9 @@ const GoogleTakeoutViewer = () => {
     }`}>
       <div className="flex items-start gap-4">
         <div className={`p-3 rounded-lg ${darkMode ? 'bg-red-900/30' : 'bg-red-100'}`}>
-          <Play className="text-red-600" size={24} />
+          {cardType === "search" 
+          ? <Search className='text-red-600' size={24} />
+          : <Play className="text-red-600" size={24} />}
         </div>
         <div className="flex-1">
           <h3 className={`font-semibold text-lg mb-2 line-clamp-2 ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>
@@ -362,19 +369,16 @@ const GoogleTakeoutViewer = () => {
     </div>
   );
 
-  const KeepNoteCard = ({ note }) => (
-    <div className={`border rounded-xl p-6 hover:shadow-lg transition-all duration-200 ${note.isPinned ? 'ring-2 ring-yellow-200' : ''} ${
+  const KeepNoteCard = ({ note } : { note: KeepsEntry }) => (
+    <div className={`border max-h-100  m-5 rounded-xl p-6 hover:shadow-lg transition-all duration-200 ${note.isPinned ? 'ring-2 ring-yellow-200' : ''} ${
       darkMode 
         ? 'bg-gray-800 border-gray-700 hover:border-gray-600' 
         : 'bg-white border-gray-200'
     }`}>
       <div className="flex items-start gap-4">
-        <div className={`p-3 rounded-lg ${darkMode ? 'bg-yellow-900/30' : 'bg-yellow-100'}`}>
-          <StickyNote className="text-yellow-600" size={24} />
-        </div>
-        <div className="flex-1">
+        <div className="flex-1 justify-between">
           <div className="flex items-center gap-2 mb-2">
-            <h3 className={`font-semibold text-lg ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>
+            <h3 className={`break-words break-all font-semibold text-lg ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>
               {note.title}
             </h3>
             {note.isPinned && (
@@ -385,21 +389,12 @@ const GoogleTakeoutViewer = () => {
               </span>
             )}
           </div>
-          <p className={`mb-4 whitespace-pre-line leading-relaxed ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-            {note.content}
+          <p className={`h-50 break-words break-all overflow-hidden truncate mb-4 whitespace-pre-line leading-relaxed ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+            {note.textContent}
           </p>
-          <div className="flex items-center justify-between">
-            <div className="flex gap-2">
-              {note.labels.map((label) => (
-                <span key={label} className={`text-xs px-3 py-1 rounded-full ${
-                  darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-700'
-                }`}>
-                  {label}
-                </span>
-              ))}
-            </div>
+          <div className="flex items-center">
             <span className={`text-sm ${darkMode ? 'text-gray-500' : 'text-gray-500'}`}>
-              {formatDate(note.createdAt)}
+              {formatDate(note.createdTimestampUsec)}
             </span>
           </div>
         </div>
@@ -460,14 +455,13 @@ const GoogleTakeoutViewer = () => {
           </div>
         </div>
       </header>
-
-      <div className="max-w-7xl mx-auto px-6 py-8">
+     <div className="max-w-7xl mx-auto px-6 py-8">
         {/* Navigation Tabs */}
         <div className="flex gap-4 mb-8">
           <TabButton id="youtube-watch" label="Watch History" icon={Play} count={youtubeWatchData.length} />
           <TabButton id="youtube-search" label="Search History" icon={Search} count={youtubeSearchData.length} />
           <TabButton id="comments" label="Comments" icon={MessageCircle} count={commentsData.length} />
-          <TabButton id="notes" label="Keep Notes" icon={StickyNote} count={keepNotesData.length} />
+          <TabButton id="notes" label="Keep Notes" icon={StickyNote} count={keepsData.length} />
         </div>
 
         {/* Search Bar */}
@@ -559,7 +553,7 @@ const GoogleTakeoutViewer = () => {
           )
           .slice(0, 20)
           .map((video: YoutubeVideo) => (
-            <YouTubeCard key={video.id} video={video} />
+            <YouTubeCard key={video.id} video={video} cardType="search" />
           ))}
          
           {activeTab === 'comments' && 
@@ -568,14 +562,27 @@ const GoogleTakeoutViewer = () => {
           .filter(
             (comment: YoutubeComment) => comment.text.toLowerCase().includes(searchQuery.toLowerCase())
           )
+          .slice(0, 20)
           .map(comment => (
             <CommentCard key={comment.id} comment={comment} />
           ))}
           
-          {activeTab === 'notes' && keepNotesData.map(note => (
+          <div className='grid grid-cols-2 md:grid-cols-4 gap-8"'>
+          {activeTab === 'notes' && 
+          
+          !keepsDataLoading && keepsData 
+          .filter(
+            (note: KeepsEntry) => 
+              note.textContent?.toLowerCase().includes(searchQuery.toLowerCase()) || 
+              note.title?.toLocaleLowerCase().includes(searchQuery.toLowerCase())
+          )
+          .slice(0, 20)
+          .map(note => (
             <KeepNoteCard key={note.id} note={note} />
           ))}
-        </div>
+ 
+          </div>
+       </div>
 
         {/* Stats Footer */}
         <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -591,7 +598,7 @@ const GoogleTakeoutViewer = () => {
                   {activeTab === 'youtube-search' ? youtubeSearchData.length : 
                    activeTab === 'youtube-watch' ? youtubeWatchData.length : 
                    activeTab === 'comments' ? commentsData.length : 
-                   keepNotesData.length}
+                   keepsData.length}
                 </p>
                 <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Total items</p>
               </div>

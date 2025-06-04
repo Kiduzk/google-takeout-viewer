@@ -30,7 +30,6 @@ def read_youtube_comments():
         # TODO: here i am just ignoring mentions in comments. If needed they could be added back in the future
         #       the commnets that have mentions have two entries instead of one
         text = json.loads("["+comment.contentJSON+"]")[-1]["text"]
-        print(text)
         comments_formatted.append(
             {
                 "id": id,
@@ -92,7 +91,7 @@ def read_keep():
             }
         )
         id += 1
-    return keep_notes[:50] 
+    return keep_notes
 
 @app.get("/items/{item_id}")
 def read_item(item_id: int, q: Union[str, None] = None):
