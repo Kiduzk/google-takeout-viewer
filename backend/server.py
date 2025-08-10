@@ -4,14 +4,13 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from google_takeout_parser.path_dispatch import TakeoutParser
 from google_takeout_parser.models import Activity, CSVYoutubeComment, Keep
+from time import time
 
 PATH = r"C:\previous_computer_files_and_backups\summer_2025_googletakeout\json_version\takeout-20250529T162908Z-2-001\Takeout"
 tp = TakeoutParser(PATH)
 tp.dispatch_map()
 
-origins = [
-    "http://localhost:5173"
-]
+origins = ["http://localhost:5173"]
 
 app = FastAPI()
 app.add_middleware(CORSMiddleware, allow_origins=origins)
@@ -21,15 +20,17 @@ app.add_middleware(CORSMiddleware, allow_origins=origins)
 def read_root():
     return [{"Hello": "World"}]
 
+
 @app.get("/youtube_comments")
 def read_youtube_comments():
-    comments = list(tp.parse(cache=False, filter_type=CSVYoutubeComment))
-    comments_formatted = []
+    comments = tp.parse(cache=True, filter_type=CSVYoutubeComment)
+    comments_formatted: list[dict] = []
     id = 0
-    for comment in comments:
+    for comment in comments: # type: ignore
         # TODO: here i am just ignoring mentions in comments. If needed they could be added back in the future
         #       the commnets that have mentions have two entries instead of one
-        text = json.loads("["+comment.contentJSON+"]")[-1]["text"]
+        comment: CSVYoutubeComment
+        text = json.loads("[" + comment.contentJSON + "]")[-1]["text"]
         comments_formatted.append(
             {
                 "id": id,
@@ -46,10 +47,11 @@ def read_youtube_comments():
 
 @app.get("/youtube_history")
 def read_youtube_history():
-    cached = list(tp.parse(cache=True, filter_type=Activity))
-    youtube_history = []
+    cached = tp.parse(cache=True, filter_type=Activity)
+    youtube_history: list[dict] = []
     id = 0
-    for entry in cached:
+    for entry in cached: # type: ignore
+        entry: Activity
         youtube_history.append(
             {
                 "id": id,
@@ -62,36 +64,40 @@ def read_youtube_history():
             }
         )
         id += 1
-    
+
     return youtube_history
+
 
 @app.get("/google_keep")
 def read_keep():
 
-    # TODO: if i try to get caching i get an error regaruding subscripted genrics. 
+    # TODO: if i try to get caching i get an error regaruding subscripted genrics.
     #        Might be worth looking in the future if reading keep files gets slower
-    results = list(tp.parse(cache=False, filter_type=Keep))
+    results = tp.parse(cache=True, filter_type=Keep)
     keep_notes = []
     id = 0
-    for entry in results:
+    for entry in results: # type: ignore
+        entry: Keep
         keep_notes.append(
             {
                 "id": id,
                 "title": entry.title,
                 "userEditedTimestampUsec": entry.userEditedTimestampUsec,
                 "createdTimestampUsec": entry.createdTimestampUsec,
-                "listContent":entry.listContent,
-                "textContent":entry.textContent,
+                "listContent": entry.listContent,
+                "textContent": entry.textContent,
                 "textContentHtml": entry.textContentHtml,
                 "color": entry.color,
-                "annotations": entry.annotations, 
+                "annotations": entry.annotations,
                 "isTrashed": entry.isTrashed,
                 "isPinned": entry.isPinned,
-                "isArchived": entry.isArchived
+                "isArchived": entry.isArchived,
             }
         )
         id += 1
+    
     return keep_notes
+
 
 @app.get("/items/{item_id}")
 def read_item(item_id: int, q: Union[str, None] = None):
