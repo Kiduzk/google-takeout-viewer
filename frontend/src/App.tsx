@@ -17,90 +17,27 @@ import {
 } from "lucide-react";
 import axios from "axios";
 
-interface YoutubeVideo {
-  id: number;
-  title: string;
-  titleUrl: string;
-  time: string;
-  details: string[];
-}
+import { SearchBar } from "./components/searchBar";
+import { FilterPanel } from "./components/filterPanel";
+import { YouTubeCard } from "./components/cards/youtubeCard";
+import { CommentCard } from "./components/cards/commentCard";
+import type {
+  YoutubeVideo,
+  YoutubeComment,
+  KeepEntry,
+  KeepAnnotation,
+  KeepListContent,
+} from "./types";
 
-interface YoutubeComment {
-  id: number;
-  videoId: string;
-  channelId: string;
-  commentId: string;
-  text: string;
-  time: string;
-}
-
-interface KeepListContent {
-  textHtml: string;
-  text: string;
-  isChecked: boolean;
-}
-
-interface KeepAnnotation {
-  description: string;
-  source: string;
-  title: string;
-  url: string;
-}
-
-interface KeepsEntry {
-  id: number;
-  title: string;
-  userEditedTimestampUsec: string;
-  createdTimestampUsec: string;
-  listContent: KeepListContent[];
-  textContent: string;
-  textContentHtml: string;
-  color: string;
-  annotations: KeepAnnotation[];
-  isTrashed: boolean;
-  isPinned: boolean;
-  isArchived: boolean;
-}
-
-const SearchBar = ({
-  searchQuery,
-  setSearchQuery,
-  activeTab,
-  darkMode,
-}: {
-  searchQuery: string;
-  setSearchQuery: (value: string) => void;
-  activeTab: string;
-  darkMode: boolean;
-}) => (
-  <div className="relative">
-    <Search
-      className={`absolute left-4 top-1/2 transform -translate-y-1/2 ${
-        darkMode ? "text-gray-400" : "text-gray-400"
-      }`}
-      size={20}
-    />
-    <input
-      type="text"
-      placeholder={`Search through your ${
-        activeTab === "youtube-watch"
-          ? "YouTube watch history"
-          : activeTab === "youtube-search"
-            ? "YouTube search history"
-            : activeTab === "comments"
-              ? "YouTube comments"
-              : "notes"
-      }...`}
-      value={searchQuery}
-      onChange={(e) => setSearchQuery(e.target.value)}
-      className={`w-full pl-12 pr-4 py-4 border rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg ${
-        darkMode
-          ? "bg-gray-800 border-gray-700 text-gray-100 placeholder-gray-400"
-          : "bg-white border-gray-200 text-gray-900"
-      }`}
-    />
-  </div>
-);
+export const formatDate = (dateString: string) => {
+  return new Date(dateString).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
 
 const GoogleTakeoutViewer = () => {
   const [activeTab, setActiveTab] = useState("youtube-watch");
@@ -116,14 +53,14 @@ const GoogleTakeoutViewer = () => {
   });
   const [youtubeDataLoading, setYoutubeDataLoading] = useState(true);
   const [youtubeSearchData, setYoutubeSearchData] = useState<YoutubeVideo[]>(
-    [],
+    []
   );
   const [youtubeWatchData, setYoutubeWatchData] = useState<YoutubeVideo[]>([]);
 
   const [commentsData, setCommentsData] = useState<YoutubeComment[]>([]);
   const [commentsDataLoading, setCommentsDataLoading] = useState(true);
 
-  const [keepsData, setKeepsData] = useState<KeepsEntry[]>([]);
+  const [keepsData, setKeepsData] = useState<KeepEntry[]>([]);
   const [keepsDataLoading, setKeepsDataLoading] = useState(true);
 
   useEffect(() => {
@@ -132,18 +69,18 @@ const GoogleTakeoutViewer = () => {
         // Youtube watch + search history
         let result = await axios.get("http://127.0.0.1:8000/youtube_history");
         let data_no_ads = result.data.filter(
-          (video: YoutubeVideo) => video.details[0] != "From Google Ads",
+          (video: YoutubeVideo) => video.details[0] != "From Google Ads"
         );
         // for now I am exlcuidng ads, but we can always get them back
         setYoutubeWatchData(
           data_no_ads.filter((video: YoutubeVideo) =>
-            video.title.toLowerCase().includes("watched"),
-          ),
+            video.title.toLowerCase().includes("watched")
+          )
         );
         setYoutubeSearchData(
           data_no_ads.filter((video: YoutubeVideo) =>
-            video.title.toLowerCase().includes("searched"),
-          ),
+            video.title.toLowerCase().includes("searched")
+          )
         );
 
         // Youtube comment history
@@ -163,155 +100,6 @@ const GoogleTakeoutViewer = () => {
     };
     get_youtube_history();
   }, []);
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
-  const FilterPanel = () => (
-    <div
-      className={`fixed inset-0 backdrop-blur-sm bg-black/20 z-50 transition-all duration-300 ${
-        filterOpen ? "opacity-100 visible" : "opacity-0 invisible"
-      }`}
-      onClick={(e) => {
-        if (e.target === e.currentTarget) {
-          setFilterOpen(false);
-        }
-      }}
-    >
-      <div
-        className={`fixed right-0 top-0 h-full w-96 shadow-xl transform transition-transform duration-300 ${
-          filterOpen ? "translate-x-0" : "translate-x-full"
-        } bg-gray-900`}
-      >
-        <div className="p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-xl font-semibold text-gray-100">Filters</h3>
-            <button
-              onClick={() => setFilterOpen(false)}
-              className="p-2 rounded-lg transition-colors hover:bg-gray-800 text-gray-400"
-            >
-              <X size={20} />
-            </button>
-          </div>
-
-          <div className="space-y-6">
-            {/* Date Range */}
-            <div>
-              <label className="block text-sm font-medium mb-3 text-gray-300">
-                Date Range
-              </label>
-              <div className="space-y-2">
-                {["all", "today", "week", "month", "year"].map((option) => (
-                  <label key={option} className="flex items-center">
-                    <input
-                      type="radio"
-                      name="dateRange"
-                      value={option}
-                      checked={filters.dateRange === option}
-                      onChange={(e) =>
-                        setFilters({ ...filters, dateRange: e.target.value })
-                      }
-                      className="mr-3 text-blue-600"
-                    />
-                    <span className="capitalize text-gray-300">
-                      {option === "all" ? "All Time" : `Last ${option}`}
-                    </span>
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            {/* Sort By */}
-            <div>
-              <label className="block text-sm font-medium mb-3 text-gray-300">
-                Sort By
-              </label>
-              <select
-                value={filters.sortBy}
-                onChange={(e) =>
-                  setFilters({ ...filters, sortBy: e.target.value })
-                }
-                className="w-full p-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-800 border-gray-700 text-gray-100"
-              >
-                <option value="newest">Newest First</option>
-                <option value="oldest">Oldest First</option>
-                <option value="alphabetical">Alphabetical</option>
-                {activeTab === "youtube" && (
-                  <option value="duration">By Duration</option>
-                )}
-              </select>
-            </div>
-
-            {/* Content Type Filter (Keep Notes) */}
-            {activeTab === "notes" && (
-              <div>
-                <label className="block text-sm font-medium mb-3 text-gray-300">
-                  Content Type
-                </label>
-                <div className="space-y-2">
-                  {["all", "pinned", "todos", "regular"].map((type) => (
-                    <label key={type} className="flex items-center">
-                      <input
-                        type="radio"
-                        name="contentType"
-                        value={type}
-                        checked={filters.contentType === type}
-                        onChange={(e) =>
-                          setFilters({
-                            ...filters,
-                            contentType: e.target.value,
-                          })
-                        }
-                        className="mr-3 text-blue-600"
-                      />
-                      <span className="capitalize text-gray-300">
-                        {type === "all"
-                          ? "All Notes"
-                          : type === "todos"
-                            ? "To-Do Lists"
-                            : type}
-                      </span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Filter Actions */}
-          <div className="mt-8 flex gap-3">
-            <button
-              onClick={() =>
-                setFilters({
-                  dateRange: "all",
-                  sortBy: "newest",
-                  channels: [],
-                  labels: [],
-                  contentType: "all",
-                })
-              }
-              className="flex-1 py-3 px-4 rounded-lg border transition-colors border-gray-700 text-gray-300 hover:bg-gray-800"
-            >
-              Clear All
-            </button>
-            <button
-              onClick={() => setFilterOpen(false)}
-              className="flex-1 py-3 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              Apply Filters
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
 
   const TabButton = ({ id, label, icon: Icon, count }) => (
     <button
@@ -338,161 +126,6 @@ const GoogleTakeoutViewer = () => {
         {count}
       </span>
     </button>
-  );
-
-  const YouTubeCard = ({
-    video,
-    cardType,
-  }: {
-    video: YoutubeVideo;
-    cardType: string;
-  }) => (
-    <div
-      className={`border rounded-xl p-6 hover:shadow-lg transition-all duration-200 hover:border-gray-300 ${
-        darkMode
-          ? "bg-gray-800 border-gray-700 hover:border-gray-600"
-          : "bg-white border-gray-200"
-      }`}
-    >
-      <div className="flex items-start gap-4">
-        <div
-          className={`p-3 rounded-lg ${
-            darkMode ? "bg-red-900/30" : "bg-red-100"
-          }`}
-        >
-          {cardType === "search" ? (
-            <Search className="text-red-600" size={24} />
-          ) : (
-            <Play className="text-red-600" size={24} />
-          )}
-        </div>
-        <div className="flex-1">
-          <h3
-            className={`font-semibold text-lg mb-2 line-clamp-2 ${
-              darkMode ? "text-gray-100" : "text-gray-900"
-            }`}
-          >
-            {video.title}
-          </h3>
-
-          <div className="flex items-center justify-between">
-            <span
-              className={`text-sm ${
-                darkMode ? "text-gray-500" : "text-gray-500"
-              }`}
-            >
-              {formatDate(video.time)}
-            </span>
-            <a
-              href={video.titleUrl}
-              target="_blank"
-              className="text-blue-600 hover:text-blue-700 font-medium text-sm"
-            >
-              View on YouTube
-            </a>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
-  const CommentCard = ({ comment }: { comment: YoutubeComment }) => (
-    <div
-      className={`border rounded-xl p-6 hover:shadow-lg transition-all duration-200 hover:border-gray-300 ${
-        darkMode
-          ? "bg-gray-800 border-gray-700 hover:border-gray-600"
-          : "bg-white border-gray-200"
-      }`}
-    >
-      <div className="flex items-start gap-4">
-        <div
-          className={`p-3 rounded-lg ${
-            darkMode ? "bg-green-900/30" : "bg-green-100"
-          }`}
-        >
-          <MessageCircle className="text-green-600" size={24} />
-        </div>
-        <div className="flex-1">
-          <h3
-            className={`font-semibold text-lg mb-2 line-clamp-2 ${
-              darkMode ? "text-gray-100" : "text-gray-900"
-            }`}
-          >
-            {comment.text}
-          </h3>
-
-          <div className="flex items-center justify-between">
-            <span
-              className={`text-sm ${
-                darkMode ? "text-gray-500" : "text-gray-500"
-              }`}
-            >
-              {formatDate(comment.time)}
-            </span>
-            <a
-              href={`https://www.youtube.com/watch?v=${comment.videoId}&lc=${comment.commentId}`}
-              target="_blank"
-              className="text-blue-600 hover:text-blue-700 font-medium text-sm"
-            >
-              View on YouTube
-            </a>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
-  const KeepNoteCard = ({ note }: { note: KeepsEntry }) => (
-    <div
-      className={`border max-h-100  m-5 rounded-xl p-6 hover:shadow-lg transition-all duration-200 ${
-        note.isPinned ? "ring-2 ring-yellow-200" : ""
-      } ${
-        darkMode
-          ? "bg-gray-800 border-gray-700 hover:border-gray-600"
-          : "bg-white border-gray-200"
-      }`}
-    >
-      <div className="flex items-start gap-4">
-        <div className="flex-1 justify-between">
-          <div className="flex items-center gap-2 mb-2">
-            <h3
-              className={`break-words break-all font-semibold text-lg ${
-                darkMode ? "text-gray-100" : "text-gray-900"
-              }`}
-            >
-              {note.title}
-            </h3>
-            {note.isPinned && (
-              <span
-                className={`text-xs px-2 py-1 rounded-full ${
-                  darkMode
-                    ? "bg-yellow-900/50 text-yellow-300"
-                    : "bg-yellow-100 text-yellow-800"
-                }`}
-              >
-                Pinned
-              </span>
-            )}
-          </div>
-          <p
-            className={`h-50 break-words break-all overflow-hidden truncate mb-4 whitespace-pre-line leading-relaxed ${
-              darkMode ? "text-gray-300" : "text-gray-700"
-            }`}
-          >
-            {note.textContent}
-          </p>
-          <div className="flex items-center">
-            <span
-              className={`text-sm ${
-                darkMode ? "text-gray-500" : "text-gray-500"
-              }`}
-            >
-              {formatDate(note.createdTimestampUsec)}
-            </span>
-          </div>
-        </div>
-      </div>
-    </div>
   );
 
   return (
@@ -705,33 +338,47 @@ const GoogleTakeoutViewer = () => {
             !youtubeDataLoading &&
             youtubeWatchData
               .filter((video: YoutubeVideo) =>
-                video.title.toLowerCase().includes(searchQuery.toLowerCase()),
+                video.title.toLowerCase().includes(searchQuery.toLowerCase())
               )
               .slice(0, 20)
               .map((video: YoutubeVideo) => (
-                <YouTubeCard key={video.id} video={video} />
+                <YouTubeCard
+                  key={video.id}
+                  video={video}
+                  cardType=""
+                  darkMode={darkMode}
+                />
               ))}
 
           {activeTab === "youtube-search" &&
             !youtubeDataLoading &&
             youtubeSearchData
               .filter((video: YoutubeVideo) =>
-                video.title.toLowerCase().includes(searchQuery.toLowerCase()),
+                video.title.toLowerCase().includes(searchQuery.toLowerCase())
               )
               .slice(0, 20)
               .map((video: YoutubeVideo) => (
-                <YouTubeCard key={video.id} video={video} cardType="search" />
+                <YouTubeCard
+                  key={video.id}
+                  video={video}
+                  cardType="search"
+                  darkMode={darkMode}
+                />
               ))}
 
           {activeTab === "comments" &&
             !commentsDataLoading &&
             commentsData
               .filter((comment: YoutubeComment) =>
-                comment.text.toLowerCase().includes(searchQuery.toLowerCase()),
+                comment.text.toLowerCase().includes(searchQuery.toLowerCase())
               )
               .slice(0, 20)
               .map((comment) => (
-                <CommentCard key={comment.id} comment={comment} />
+                <CommentCard
+                  key={comment.id}
+                  comment={comment}
+                  darkMode={darkMode}
+                />
               ))}
 
           <div className='grid grid-cols-2 md:grid-cols-4 gap-8"'>
@@ -739,13 +386,13 @@ const GoogleTakeoutViewer = () => {
               !keepsDataLoading &&
               keepsData
                 .filter(
-                  (note: KeepsEntry) =>
+                  (note: KeepEntry) =>
                     note.textContent
                       ?.toLowerCase()
                       .includes(searchQuery.toLowerCase()) ||
                     note.title
                       ?.toLocaleLowerCase()
-                      .includes(searchQuery.toLowerCase()),
+                      .includes(searchQuery.toLowerCase())
                 )
                 .slice(0, 20)
                 .map((note) => <KeepNoteCard key={note.id} note={note} />)}
@@ -852,7 +499,13 @@ const GoogleTakeoutViewer = () => {
       </div>
 
       {/* Filter Panel */}
-      <FilterPanel />
+      <FilterPanel
+        filterOpen={filterOpen}
+        setFilterOpen={setFilterOpen}
+        setFilters={setFilters}
+        filters={filters}
+        activeTab={activeTab}
+      />
     </div>
   );
 };
