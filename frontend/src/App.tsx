@@ -21,13 +21,8 @@ import { SearchBar } from "./components/searchBar";
 import { FilterPanel } from "./components/filterPanel";
 import { YouTubeCard } from "./components/cards/youtubeCard";
 import { CommentCard } from "./components/cards/commentCard";
-import type {
-  YoutubeVideo,
-  YoutubeComment,
-  KeepEntry,
-  KeepAnnotation,
-  KeepListContent,
-} from "./types";
+import { KeepNoteCard } from "./components/cards/keepsNoteCard";
+import type { YoutubeVideo, YoutubeComment, KeepEntry } from "./types";
 
 export const formatDate = (dateString: string) => {
   return new Date(dateString).toLocaleDateString("en-US", {
@@ -63,6 +58,10 @@ const GoogleTakeoutViewer = () => {
   const [keepsData, setKeepsData] = useState<KeepEntry[]>([]);
   const [keepsDataLoading, setKeepsDataLoading] = useState(true);
 
+  const [statusMessage, setStatusMessage] = useState(
+    "Loading watch and search history..."
+  );
+
   useEffect(() => {
     const get_youtube_history = async () => {
       try {
@@ -84,24 +83,39 @@ const GoogleTakeoutViewer = () => {
         );
 
         // Youtube comment history
+        setStatusMessage("Loading comment history");
         result = await axios.get("http://127.0.0.1:8000/youtube_comments");
         setCommentsData(result.data);
+        setStatusMessage("Done");
 
         // Keeps data
+        setStatusMessage("Loading Keeps data");
         result = await axios.get("http://127.0.0.1:8000/google_keep");
         setKeepsData(result.data);
       } catch (err) {
         console.log(err);
+        setStatusMessage("Error loading data. Check console logs.");
       } finally {
         setYoutubeDataLoading(false);
         setCommentsDataLoading(false);
         setKeepsDataLoading(false);
+        setStatusMessage("Data loaded successfully");
       }
     };
     get_youtube_history();
   }, []);
 
-  const TabButton = ({ id, label, icon: Icon, count }) => (
+  const TabButton = ({
+    id,
+    label,
+    icon: Icon,
+    count,
+  }: {
+    id: string;
+    label: string;
+    icon: React.ElementType;
+    count: number;
+  }) => (
     <button
       onClick={() => setActiveTab(id)}
       className={`flex items-center gap-3 px-6 py-3 rounded-lg font-medium transition-all duration-200 ${
@@ -161,6 +175,14 @@ const GoogleTakeoutViewer = () => {
               </p>
             </div>
             <div className="flex items-center gap-3">
+              <div
+                className={`flex items-center gap-2 text-sm ${
+                  darkMode ? "text-gray-400" : "text-gray-600"
+                }`}
+              >
+                <Eye size={16} />
+                <span>{statusMessage}</span>
+              </div>
               <button
                 onClick={() => setDarkMode(!darkMode)}
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
@@ -183,14 +205,6 @@ const GoogleTakeoutViewer = () => {
                 <Filter size={18} />
                 Filters
               </button>
-              <div
-                className={`flex items-center gap-2 text-sm ${
-                  darkMode ? "text-gray-400" : "text-gray-600"
-                }`}
-              >
-                <Eye size={16} />
-                <span>Last updated: Today</span>
-              </div>
             </div>
           </div>
         </div>
@@ -395,7 +409,9 @@ const GoogleTakeoutViewer = () => {
                       .includes(searchQuery.toLowerCase())
                 )
                 .slice(0, 20)
-                .map((note) => <KeepNoteCard key={note.id} note={note} />)}
+                .map((note) => (
+                  <KeepNoteCard key={note.id} note={note} darkMode={darkMode} />
+                ))}
           </div>
         </div>
 
