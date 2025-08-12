@@ -73,7 +73,7 @@ def read_keep():
 
     # TODO: if i try to get caching i get an error regaruding subscripted genrics.
     #        Might be worth looking in the future if reading keep files gets slower
-    results = tp.parse(cache=True, filter_type=Keep)
+    results = tp.parse(cache=False, filter_type=Keep)
     keep_notes = []
     id = 0
     for entry in results: # type: ignore

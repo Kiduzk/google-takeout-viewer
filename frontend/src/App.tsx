@@ -5,20 +5,12 @@ import {
   Play,
   MessageCircle,
   StickyNote,
-  Calendar,
-  Filter,
-  Eye,
-  Clock,
-  Hash,
   Moon,
   Sun,
-  X,
-  Tag,
 } from "lucide-react";
 import axios from "axios";
 
 import { SearchBar } from "./components/searchBar";
-import { FilterPanel } from "./components/filterPanel";
 import { YouTubeCard } from "./components/cards/youtubeCard";
 import { CommentCard } from "./components/cards/commentCard";
 import { KeepNoteCard } from "./components/cards/keepsNoteCard";
@@ -37,7 +29,6 @@ export const formatDate = (dateString: string) => {
 const GoogleTakeoutViewer = () => {
   const [activeTab, setActiveTab] = useState("youtube-watch");
   const [searchQuery, setSearchQuery] = useState("");
-  const [filterOpen, setFilterOpen] = useState(false);
   const [darkMode, setDarkMode] = useState(true);
   const [filters, setFilters] = useState({
     dateRange: "all",
@@ -59,7 +50,7 @@ const GoogleTakeoutViewer = () => {
   const [keepsDataLoading, setKeepsDataLoading] = useState(true);
 
   const [statusMessage, setStatusMessage] = useState(
-    "Loading watch and search history..."
+    "Loading watch and search history"
   );
 
   useEffect(() => {
@@ -72,14 +63,28 @@ const GoogleTakeoutViewer = () => {
         );
         // for now I am exlcuidng ads, but we can always get them back
         setYoutubeWatchData(
-          data_no_ads.filter((video: YoutubeVideo) =>
-            video.title.toLowerCase().includes("watched")
-          )
+          data_no_ads
+            .filter((video: YoutubeVideo) =>
+              video.title.toLowerCase().includes("watched")
+            )
+            .map((video: YoutubeVideo) => {
+              return {
+                ...video,
+                title: video.title.split(" ").slice(1).join(" "),
+              };
+            })
         );
         setYoutubeSearchData(
-          data_no_ads.filter((video: YoutubeVideo) =>
-            video.title.toLowerCase().includes("searched")
-          )
+          data_no_ads
+            .filter((video: YoutubeVideo) =>
+              video.title.toLowerCase().includes("searched")
+            )
+            .map((video: YoutubeVideo) => {
+              return {
+                ...video,
+                title: video.title.split(" ").slice(2).join(" "),
+              };
+            })
         );
 
         // Youtube comment history
@@ -99,7 +104,7 @@ const GoogleTakeoutViewer = () => {
         setYoutubeDataLoading(false);
         setCommentsDataLoading(false);
         setKeepsDataLoading(false);
-        setStatusMessage("Data loaded successfully");
+        setStatusMessage("Data loaded");
       }
     };
     get_youtube_history();
@@ -180,7 +185,6 @@ const GoogleTakeoutViewer = () => {
                   darkMode ? "text-gray-400" : "text-gray-600"
                 }`}
               >
-                <Eye size={16} />
                 <span>{statusMessage}</span>
               </div>
               <button
@@ -191,20 +195,99 @@ const GoogleTakeoutViewer = () => {
                     : "bg-gray-100 hover:bg-gray-200 text-gray-700"
                 }`}
               >
-                {darkMode ? <Sun size={18} /> : <Moon size={18} />}
-                {darkMode ? "Light" : "Dark"}
+                {darkMode ? (
+                  <Sun className="h-8" size={24} />
+                ) : (
+                  <Moon size={24} />
+                )}
               </button>
-              <button
-                onClick={() => setFilterOpen(!filterOpen)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-                  darkMode
-                    ? "bg-gray-800 hover:bg-gray-700 text-gray-300"
-                    : "bg-gray-100 hover:bg-gray-200 text-gray-700"
-                }`}
-              >
-                <Filter size={18} />
-                Filters
-              </button>
+              <div className="space-y-6">
+                <select
+                  value={filters.sortBy}
+                  onChange={(e) => {
+                    setFilters({ ...filters, sortBy: e.target.value });
+                    setYoutubeWatchData(
+                      [...youtubeWatchData].sort((a, b) => {
+                        if (filters.sortBy === "alphabetical") {
+                          return a.title.localeCompare(b.title);
+                        } else if (filters.sortBy === "oldest") {
+                          return (
+                            new Date(a.time).getTime() -
+                            new Date(b.time).getTime()
+                          );
+                        } else {
+                          return (
+                            new Date(b.time).getTime() -
+                            new Date(a.time).getTime()
+                          );
+                        }
+                      })
+                    );
+                    setYoutubeSearchData(
+                      [...youtubeSearchData].sort((a, b) => {
+                        if (filters.sortBy === "alphabetical") {
+                          return a.title.localeCompare(b.title);
+                        } else if (filters.sortBy === "oldest") {
+                          return (
+                            new Date(a.time).getTime() -
+                            new Date(b.time).getTime()
+                          );
+                        } else {
+                          return (
+                            new Date(b.time).getTime() -
+                            new Date(a.time).getTime()
+                          );
+                        }
+                      })
+                    );
+                    setCommentsData(
+                      [...commentsData].sort((a, b) => {
+                        if (filters.sortBy === "alphabetical") {
+                          return a.text.localeCompare(b.text);
+                        } else if (filters.sortBy === "oldest") {
+                          return (
+                            new Date(a.time).getTime() -
+                            new Date(b.time).getTime()
+                          );
+                        } else {
+                          return (
+                            new Date(b.time).getTime() -
+                            new Date(a.time).getTime()
+                          );
+                        }
+                      })
+                    );
+                    setKeepsData(
+                      [...keepsData].sort((a, b) => {
+                        if (filters.sortBy === "alphabetical") {
+                          return (a?.textContent || "").localeCompare(
+                            b?.textContent || ""
+                          );
+                        } else if (filters.sortBy === "oldest") {
+                          return (
+                            new Date(a.createdTimestampUsec).getTime() -
+                            new Date(b.createdTimestampUsec).getTime()
+                          );
+                        } else {
+                          return (
+                            new Date(b.createdTimestampUsec).getTime() -
+                            new Date(a.createdTimestampUsec).getTime()
+                          );
+                        }
+                      })
+                    );
+                  }}
+                  className={`w-full p-3 rounded-lg border focus:outline-none bg-gray-800 border-gray-700 text-gray-100 ${
+                    darkMode
+                      ? "bg-gray-800 hover:bg-gray-700 text-gray-300"
+                      : "bg-gray-100 hover:bg-gray-200 text-gray-700"
+                  }`}
+                >
+                  <option value="newest">Newest First</option>
+                  <option value="oldest">Oldest First</option>
+                  <option value="alphabetical">Alphabetical</option>
+                </select>
+              </div>
             </div>
           </div>
         </div>
@@ -246,104 +329,6 @@ const GoogleTakeoutViewer = () => {
             activeTab={activeTab}
             darkMode={darkMode}
           />
-
-          {/* Active Filters Display */}
-          {(filters.channels.length > 0 ||
-            filters.labels.length > 0 ||
-            filters.dateRange !== "all" ||
-            filters.contentType !== "all") && (
-            <div className="mt-4 flex flex-wrap gap-2">
-              {filters.dateRange !== "all" && (
-                <span
-                  className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm ${
-                    darkMode
-                      ? "bg-gray-800 text-gray-300"
-                      : "bg-gray-100 text-gray-700"
-                  }`}
-                >
-                  <Calendar size={14} />
-                  Last {filters.dateRange}
-                  <button
-                    onClick={() => setFilters({ ...filters, dateRange: "all" })}
-                    className="hover:text-red-500"
-                  >
-                    <X size={14} />
-                  </button>
-                </span>
-              )}
-
-              {filters.channels.map((channel) => (
-                <span
-                  key={channel}
-                  className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm ${
-                    darkMode
-                      ? "bg-gray-800 text-gray-300"
-                      : "bg-gray-100 text-gray-700"
-                  }`}
-                >
-                  <Hash size={14} />
-                  {channel}
-                  <button
-                    onClick={() =>
-                      setFilters({
-                        ...filters,
-                        channels: filters.channels.filter((c) => c !== channel),
-                      })
-                    }
-                    className="hover:text-red-500"
-                  >
-                    <X size={14} />
-                  </button>
-                </span>
-              ))}
-
-              {filters.labels.map((label) => (
-                <span
-                  key={label}
-                  className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm ${
-                    darkMode
-                      ? "bg-gray-800 text-gray-300"
-                      : "bg-gray-100 text-gray-700"
-                  }`}
-                >
-                  <Tag size={14} />
-                  {label}
-                  <button
-                    onClick={() =>
-                      setFilters({
-                        ...filters,
-                        labels: filters.labels.filter((l) => l !== label),
-                      })
-                    }
-                    className="hover:text-red-500"
-                  >
-                    <X size={14} />
-                  </button>
-                </span>
-              ))}
-
-              {filters.contentType !== "all" && (
-                <span
-                  className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm ${
-                    darkMode
-                      ? "bg-gray-800 text-gray-300"
-                      : "bg-gray-100 text-gray-700"
-                  }`}
-                >
-                  <StickyNote size={14} />
-                  {filters.contentType}
-                  <button
-                    onClick={() =>
-                      setFilters({ ...filters, contentType: "all" })
-                    }
-                    className="hover:text-red-500"
-                  >
-                    <X size={14} />
-                  </button>
-                </span>
-              )}
-            </div>
-          )}
         </div>
 
         {/* Content */}
@@ -401,127 +386,29 @@ const GoogleTakeoutViewer = () => {
               keepsData
                 .filter(
                   (note: KeepEntry) =>
-                    note.textContent
+                    (note.textContent || note.title) &&
+                    (note.textContent
                       ?.toLowerCase()
                       .includes(searchQuery.toLowerCase()) ||
-                    note.title
-                      ?.toLocaleLowerCase()
-                      .includes(searchQuery.toLowerCase())
+                      note.title
+                        ?.toLowerCase()
+                        .includes(searchQuery.toLowerCase()))
                 )
+
                 .slice(0, 20)
                 .map((note) => (
                   <KeepNoteCard key={note.id} note={note} darkMode={darkMode} />
                 ))}
           </div>
         </div>
-
-        {/* Stats Footer */}
-        <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div
-            className={`p-6 rounded-xl border transition-colors duration-300 ${
-              darkMode
-                ? "bg-gray-800 border-gray-700"
-                : "bg-white border-gray-200"
-            }`}
-          >
-            <div className="flex items-center gap-3">
-              <Calendar className="text-blue-600" size={24} />
-              <div>
-                <p
-                  className={`text-2xl font-bold ${
-                    darkMode ? "text-gray-100" : "text-gray-900"
-                  }`}
-                >
-                  {activeTab === "youtube-search"
-                    ? youtubeSearchData.length
-                    : activeTab === "youtube-watch"
-                      ? youtubeWatchData.length
-                      : activeTab === "comments"
-                        ? commentsData.length
-                        : keepsData.length}
-                </p>
-                <p
-                  className={`text-sm ${
-                    darkMode ? "text-gray-400" : "text-gray-600"
-                  }`}
-                >
-                  Total items
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div
-            className={`p-6 rounded-xl border transition-colors duration-300 ${
-              darkMode
-                ? "bg-gray-800 border-gray-700"
-                : "bg-white border-gray-200"
-            }`}
-          >
-            <div className="flex items-center gap-3">
-              <Clock className="text-green-600" size={24} />
-              <div>
-                <p
-                  className={`text-2xl font-bold ${
-                    darkMode ? "text-gray-100" : "text-gray-900"
-                  }`}
-                >
-                  {filters.dateRange === "all"
-                    ? "All Time"
-                    : `Last ${filters.dateRange}`}
-                </p>
-                <p
-                  className={`text-sm ${
-                    darkMode ? "text-gray-400" : "text-gray-600"
-                  }`}
-                >
-                  Date range
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div
-            className={`p-6 rounded-xl border transition-colors duration-300 ${
-              darkMode
-                ? "bg-gray-800 border-gray-700"
-                : "bg-white border-gray-200"
-            }`}
-          >
-            <div className="flex items-center gap-3">
-              <Filter className="text-purple-600" size={24} />
-              <div>
-                <p
-                  className={`text-2xl font-bold ${
-                    darkMode ? "text-gray-100" : "text-gray-900"
-                  }`}
-                >
-                  {filters.channels.length +
-                    filters.labels.length +
-                    (filters.dateRange !== "all" ? 1 : 0) +
-                    (filters.contentType !== "all" ? 1 : 0)}
-                </p>
-                <p
-                  className={`text-sm ${
-                    darkMode ? "text-gray-400" : "text-gray-600"
-                  }`}
-                >
-                  Active filters
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
 
-      {/* Filter Panel */}
-      <FilterPanel
-        filterOpen={filterOpen}
-        setFilterOpen={setFilterOpen}
-        setFilters={setFilters}
-        filters={filters}
-        activeTab={activeTab}
-      />
+      {/* Filter Options */}
+      <div className="mt-8 flex gap-3">
+        <div className="space-y-6">
+          <div></div>
+        </div>
+      </div>
     </div>
   );
 };
