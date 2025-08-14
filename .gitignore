@@ -7,3 +7,46 @@
 env
 venv
 .python-version
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Dependency directories
+node_modules/
+
+# Build artifacts
+dist/
+build/
+out/
+*.js
+*.js.map
+*.d.ts
+
+# Configuration files
+.env
+.env.*.local
+.vscode/
+!.vscode/extensions.json # Keep this if you want to share recommended extensions
+.idea/
+
+# Operating System files
+.DS_Store
+Thumbs.db
+
+# Editor-specific files
+*.sublime-project
+*.sublime-workspace
+.history/
+
+# Test coverage
+coverage/
+
+# IDE-specific files (e.g., for Visual Studio Code, WebStorm)
+.vscode/
+.idea/

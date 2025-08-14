@@ -14,6 +14,9 @@ import { SearchBar } from "./components/searchBar";
 import { YouTubeCard } from "./components/cards/youtubeCard";
 import { CommentCard } from "./components/cards/commentCard";
 import { KeepNoteCard } from "./components/cards/keepsNoteCard";
+
+import { YoutubeWatchGraph } from "./components/graphs/youtubeWatchGraph";
+
 import type { YoutubeVideo, YoutubeComment, KeepEntry } from "./types";
 
 export const formatDate = (dateString: string) => {
@@ -42,6 +45,11 @@ const GoogleTakeoutViewer = () => {
     []
   );
   const [youtubeWatchData, setYoutubeWatchData] = useState<YoutubeVideo[]>([]);
+
+  // TODO: look into how to add more graphs in future, probably need more general
+  const [youtubeWatchDataGraph, setYoutubeWatchDataGraph] = useState<
+    { date: string; count: number }[]
+  >([]);
 
   const [commentsData, setCommentsData] = useState<YoutubeComment[]>([]);
   const [commentsDataLoading, setCommentsDataLoading] = useState(true);
@@ -74,6 +82,27 @@ const GoogleTakeoutViewer = () => {
               };
             })
         );
+        // for graph visualization
+        // Goal: to look at how much videos we watch per day. Accumulate all the same days in one
+        const watchGraphDataByDate = data_no_ads
+          .filter((video: YoutubeVideo) =>
+            video.title.toLowerCase().includes("watched")
+          )
+          .map((video: YoutubeVideo) => ({
+            date: new Date(video.time).toLocaleDateString(),
+          }))
+          .reduce((count: Record<string, number>, item: { date: string }) => {
+            count[item.date] = (count[item.date] || 0) + 1;
+            return count;
+          }, {});
+        const chartData = Object.entries(watchGraphDataByDate).map(
+          ([date, count]) => ({
+            date,
+            count: Number(count),
+          })
+        ); // array gymnastics to make output consistent with how recharts wants it
+        setYoutubeWatchDataGraph(chartData);
+
         setYoutubeSearchData(
           data_no_ads
             .filter((video: YoutubeVideo) =>
@@ -333,6 +362,15 @@ const GoogleTakeoutViewer = () => {
 
         {/* Content */}
         <div className="space-y-6">
+          {activeTab === "youtube-watch" && (
+            <div className="flex justify-center mb-3">
+              <YoutubeWatchGraph
+                youtubeWatchDataGraph={youtubeWatchDataGraph}
+                darkMode={darkMode}
+              />
+            </div>
+          )}
+
           {activeTab === "youtube-watch" &&
             !youtubeDataLoading &&
             youtubeWatchData
