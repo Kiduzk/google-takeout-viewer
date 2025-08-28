@@ -5,6 +5,8 @@ import {
   Play,
   MessageCircle,
   StickyNote,
+  Sun,
+  Moon
 } from "lucide-react";
 import axios from "axios";
 
@@ -234,28 +236,16 @@ const GoogleTakeoutViewer = () => {
                 <span>{statusMessage}</span>
               </div>
 
-              {/* I have disabled light mode for now, but we can add it back easily if needed */}
-              {/* <button
+              <button
                 onClick={() => setDarkMode(!darkMode)}
                 className={darkMode ? "theme-toggle-dark" : "theme-toggle-light"}
               >
                 {darkMode ? (
-                  <Sun className="h-8" size={24} />
+                  <Sun size={20} />
                 ) : (
-                  <Moon size={24} />
+                  <Moon size={20} />
                 )}
-              </button> */}
-              <div className="space-y-6">
-                <select
-                  value={filters.sortBy}
-                  onChange={(e) => handleSort(e.target.value)}
-                  className={darkMode ? "select-dark" : "select-light"}
-                >
-                  <option value="newest">Newest First</option>
-                  <option value="oldest">Oldest First</option>
-                  <option value="alphabetical">Alphabetical</option>
-                </select>
-              </div>
+              </button>
             </div>
           </div>
         </div>
@@ -311,7 +301,6 @@ const GoogleTakeoutViewer = () => {
             darkMode={darkMode}
           />
         </div>
-
         {/* Content */}
         <div className="content-section">
           {activeTab === "youtube-watch" && (
@@ -322,7 +311,17 @@ const GoogleTakeoutViewer = () => {
               />
             </div>
           )}
-
+        <div className="flex w-35 justify-end mb-4">
+          <select
+            value={filters.sortBy}
+            onChange={(e) => handleSort(e.target.value)}
+            className={darkMode ? "select-dark" : "select-light"}
+          >
+            <option value="newest">Newest First</option>
+            <option value="oldest">Oldest First</option>
+            <option value="alphabetical">Alphabetical</option>
+          </select>
+        </div>
           {activeTab === "youtube-watch" &&
             !youtubeDataLoading &&
             youtubeWatchData
