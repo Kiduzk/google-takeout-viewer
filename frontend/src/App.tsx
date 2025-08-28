@@ -6,7 +6,11 @@ import {
   MessageCircle,
   StickyNote,
   Sun,
-  Moon
+  Moon,
+  ArrowUp,
+  ArrowDown,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react";
 import axios from "axios";
 
@@ -41,6 +45,8 @@ const GoogleTakeoutViewer = () => {
     labels: [],
     contentType: "all",
   });
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 20;
   const [youtubeDataLoading, setYoutubeDataLoading] = useState(true);
   const [youtubeSearchData, setYoutubeSearchData] = useState<YoutubeVideo[]>([]);
   const [youtubeWatchData, setYoutubeWatchData] = useState<YoutubeVideo[]>([]);
@@ -137,6 +143,34 @@ const GoogleTakeoutViewer = () => {
         }
       })
     );
+    setCurrentPage(1); // Reset to first page when sorting
+  };
+  
+  // Calculate total pages based on filtered data
+  const getTotalPages = () => {
+    let filteredDataLength = 0;
+    
+    if (activeTab === "youtube-watch") {
+      filteredDataLength = youtubeWatchData.filter((video) => 
+        video.title.toLowerCase().includes(searchQuery.toLowerCase())
+      ).length;
+    } else if (activeTab === "youtube-search") {
+      filteredDataLength = youtubeSearchData.filter((video) => 
+        video.title.toLowerCase().includes(searchQuery.toLowerCase())
+      ).length;
+    } else if (activeTab === "comments") {
+      filteredDataLength = commentsData.filter((comment) => 
+        comment.text.toLowerCase().includes(searchQuery.toLowerCase())
+      ).length;
+    } else if (activeTab === "notes") {
+      filteredDataLength = keepsData.filter((note) =>
+        (note.textContent || note.title) &&
+        (note.textContent?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        note.title?.toLowerCase().includes(searchQuery.toLowerCase()))
+      ).length;
+    }
+    
+    return Math.ceil(filteredDataLength / itemsPerPage);
   };
 
   useEffect(() => {
@@ -311,24 +345,45 @@ const GoogleTakeoutViewer = () => {
               />
             </div>
           )}
-        <div className="flex w-35 justify-end mb-4">
-          <select
-            value={filters.sortBy}
-            onChange={(e) => handleSort(e.target.value)}
-            className={darkMode ? "select-dark" : "select-light"}
-          >
-            <option value="newest">Newest First</option>
-            <option value="oldest">Oldest First</option>
-            <option value="alphabetical">Alphabetical</option>
-          </select>
-        </div>
+          
+          <div className="flex justify-between mb-4 items-center">
+            {/* Sort dropdown */}
+            <div>
+              <select
+                value={filters.sortBy}
+                onChange={(e) => handleSort(e.target.value)}
+                className={`appearance-none pl-4 pr-10 py-2 rounded-lg cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  darkMode ? "bg-gray-800 border-gray-700 text-gray-200" : "bg-white border-gray-200 text-gray-700"
+                } border`}
+                style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='${darkMode ? '%23aaa' : '%23666'}' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`, backgroundPosition: 'right 0.5rem center', backgroundSize: '1rem', backgroundRepeat: 'no-repeat' }}
+              >
+                <option value="newest">Newest First</option>
+                <option value="oldest">Oldest First</option>
+                <option value="alphabetical">A to Z</option>
+              </select>
+            </div>
+            
+            {/* Go Down button */}
+            <button
+              onClick={() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })}
+              title="Go to bottom"
+              className={`flex items-center gap-1 px-3 py-2 rounded-lg border transition-colors ${
+                darkMode ? "bg-gray-800 border-gray-700 text-gray-200 hover:bg-gray-700" : "bg-white border-gray-200 text-gray-700 hover:bg-gray-50"
+              }`}
+            >
+              <ArrowDown size={16} />
+              <span>Bottom</span>
+            </button>
+          </div>
+          
+          {/* Content rendering remains mostly the same... */}
           {activeTab === "youtube-watch" &&
             !youtubeDataLoading &&
             youtubeWatchData
               .filter((video: YoutubeVideo) =>
                 video.title.toLowerCase().includes(searchQuery.toLowerCase())
               )
-              .slice(0, 20)
+              .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
               .map((video: YoutubeVideo) => (
                 <YouTubeCard
                   key={video.id}
@@ -344,7 +399,7 @@ const GoogleTakeoutViewer = () => {
               .filter((video: YoutubeVideo) =>
                 video.title.toLowerCase().includes(searchQuery.toLowerCase())
               )
-              .slice(0, 20)
+              .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
               .map((video: YoutubeVideo) => (
                 <YouTubeCard
                   key={video.id}
@@ -360,7 +415,7 @@ const GoogleTakeoutViewer = () => {
               .filter((comment: YoutubeComment) =>
                 comment.text.toLowerCase().includes(searchQuery.toLowerCase())
               )
-              .slice(0, 20)
+              .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
               .map((comment) => (
                 <CommentCard
                   key={comment.id}
@@ -382,12 +437,64 @@ const GoogleTakeoutViewer = () => {
                         ?.toLowerCase()
                         .includes(searchQuery.toLowerCase()))
                 )
-                .slice(0, 20)
+                .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
                 .map((note) => (
                   <KeepNoteCard key={note.id} note={note} darkMode={darkMode} />
                 ))}
             </div>
           )}
+          
+          {/* Pagination */}
+          {getTotalPages() > 1 && (
+            <div className="flex justify-center items-center mt-6 gap-2">
+              <button
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className={`flex items-center px-3 py-2 rounded-lg border transition-colors ${
+                  currentPage === 1 
+                    ? `opacity-50 ${darkMode ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"}` 
+                    : darkMode 
+                      ? "bg-gray-800 border-gray-700 text-gray-200 hover:bg-gray-700" 
+                      : "bg-white border-gray-200 text-gray-700 hover:bg-gray-50"
+                }`}
+              >
+                <ChevronLeft size={16} />
+                <span className="ml-1">Previous</span>
+              </button>
+              
+              <div className={`px-4 py-2 font-medium ${darkMode ? "text-gray-300" : "text-gray-800"}`}>
+                Page {currentPage} of {getTotalPages()}
+              </div>
+              
+              <button
+                onClick={() => setCurrentPage(p => Math.min(getTotalPages(), p + 1))}
+                disabled={currentPage === getTotalPages()}
+                className={`flex items-center px-3 py-2 rounded-lg border transition-colors ${
+                  currentPage === getTotalPages() 
+                    ? `opacity-50 ${darkMode ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"}` 
+                    : darkMode 
+                      ? "bg-gray-800 border-gray-700 text-gray-200 hover:bg-gray-700" 
+                      : "bg-white border-gray-200 text-gray-700 hover:bg-gray-50"
+                }`}
+              >
+                <span className="mr-1">Next</span>
+                <ChevronRight size={16} />
+              </button>
+            </div>
+          )}
+          
+          {/* Go Up button at bottom */}
+          <div className="flex justify-center mt-8 mb-4">
+            <button
+              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+              className={`flex items-center gap-1 px-3 py-2 rounded-lg border transition-colors ${
+                darkMode ? "bg-gray-800 border-gray-700 text-gray-200 hover:bg-gray-700" : "bg-white border-gray-200 text-gray-700 hover:bg-gray-50"
+              }`}
+            >
+              <ArrowUp size={16} />
+              <span>Back to Top</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>
