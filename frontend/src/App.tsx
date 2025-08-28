@@ -5,12 +5,11 @@ import {
   Play,
   MessageCircle,
   StickyNote,
-  Moon,
-  Sun,
 } from "lucide-react";
 import axios from "axios";
 
 import { SearchBar } from "./components/searchBar";
+import { TabButton } from "./components/TabButton";
 import { YouTubeCard } from "./components/cards/youtubeCard";
 import { CommentCard } from "./components/cards/commentCard";
 import { KeepNoteCard } from "./components/cards/keepsNoteCard";
@@ -41,9 +40,7 @@ const GoogleTakeoutViewer = () => {
     contentType: "all",
   });
   const [youtubeDataLoading, setYoutubeDataLoading] = useState(true);
-  const [youtubeSearchData, setYoutubeSearchData] = useState<YoutubeVideo[]>(
-    []
-  );
+  const [youtubeSearchData, setYoutubeSearchData] = useState<YoutubeVideo[]>([]);
   const [youtubeWatchData, setYoutubeWatchData] = useState<YoutubeVideo[]>([]);
 
   // TODO: look into how to add more graphs in future, probably need more general
@@ -60,6 +57,85 @@ const GoogleTakeoutViewer = () => {
   const [statusMessage, setStatusMessage] = useState(
     "Loading watch and search history"
   );
+  
+  // Sort handler function
+  const handleSort = (sortValue: string) => {
+    setFilters({ ...filters, sortBy: sortValue });
+    
+    setYoutubeWatchData(
+      [...youtubeWatchData].sort((a, b) => {
+        if (sortValue === "alphabetical") {
+          return a.title.localeCompare(b.title);
+        } else if (sortValue === "oldest") {
+          return (
+            new Date(a.time).getTime() -
+            new Date(b.time).getTime()
+          );
+        } else {
+          return (
+            new Date(b.time).getTime() -
+            new Date(a.time).getTime()
+          );
+        }
+      })
+    );
+    
+    setYoutubeSearchData(
+      [...youtubeSearchData].sort((a, b) => {
+        if (sortValue === "alphabetical") {
+          return a.title.localeCompare(b.title);
+        } else if (sortValue === "oldest") {
+          return (
+            new Date(a.time).getTime() -
+            new Date(b.time).getTime()
+          );
+        } else {
+          return (
+            new Date(b.time).getTime() -
+            new Date(a.time).getTime()
+          );
+        }
+      })
+    );
+    
+    setCommentsData(
+      [...commentsData].sort((a, b) => {
+        if (sortValue === "alphabetical") {
+          return a.text.localeCompare(b.text);
+        } else if (sortValue === "oldest") {
+          return (
+            new Date(a.time).getTime() -
+            new Date(b.time).getTime()
+          );
+        } else {
+          return (
+            new Date(b.time).getTime() -
+            new Date(a.time).getTime()
+          );
+        }
+      })
+    );
+    
+    setKeepsData(
+      [...keepsData].sort((a, b) => {
+        if (sortValue === "alphabetical") {
+          return (a?.textContent || "").localeCompare(
+            b?.textContent || ""
+          );
+        } else if (sortValue === "oldest") {
+          return (
+            new Date(a.createdTimestampUsec).getTime() -
+            new Date(b.createdTimestampUsec).getTime()
+          );
+        } else {
+          return (
+            new Date(b.createdTimestampUsec).getTime() -
+            new Date(a.createdTimestampUsec).getTime()
+          );
+        }
+      })
+    );
+  };
 
   useEffect(() => {
     const get_youtube_history = async () => {
@@ -139,178 +215,41 @@ const GoogleTakeoutViewer = () => {
     get_youtube_history();
   }, []);
 
-  const TabButton = ({
-    id,
-    label,
-    icon: Icon,
-    count,
-  }: {
-    id: string;
-    label: string;
-    icon: React.ElementType;
-    count: number;
-  }) => (
-    <button
-      onClick={() => setActiveTab(id)}
-      className={`flex items-center gap-3 px-6 py-3 rounded-lg font-medium transition-all duration-200 ${
-        activeTab === id
-          ? "bg-blue-600 text-white shadow-lg"
-          : darkMode
-            ? "bg-gray-800 text-gray-300 hover:bg-gray-700"
-            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-      }`}
-    >
-      <Icon size={20} />
-      <span>{label}</span>
-      <span
-        className={`text-sm px-2 py-1 rounded-full ${
-          activeTab === id
-            ? "bg-blue-500"
-            : darkMode
-              ? "bg-gray-700"
-              : "bg-gray-300"
-        }`}
-      >
-        {count}
-      </span>
-    </button>
-  );
-
   return (
-    <div
-      className={`min-h-screen transition-colors duration-300 ${
-        darkMode
-          ? "bg-gradient-to-br from-gray-900 to-gray-800"
-          : "bg-gradient-to-br from-gray-50 to-gray-100"
-      }`}
-    >
+    <div className={darkMode ? "app-bg-dark" : "app-bg-light"}>
       {/* Header */}
-      <header
-        className={`border-b shadow-sm transition-colors duration-300 ${
-          darkMode ? "bg-gray-900 border-gray-700" : "bg-white border-gray-200"
-        }`}
-      >
-        <div className="max-w-7xl mx-auto px-6 py-6">
-          <div className="flex items-center justify-between">
+      <header className={darkMode ? "app-header-dark" : "app-header-light"}>
+        <div className="container-layout">
+          <div className="header-content">
             <div>
-              <h1
-                className={`text-3xl font-bold ${
-                  darkMode ? "text-gray-100" : "text-gray-900"
-                }`}
-              >
+              <h1 className={darkMode ? "heading-title-dark" : "heading-title-light"}>
                 Google Takeout Viewer
               </h1>
-              <p
-                className={`mt-1 ${
-                  darkMode ? "text-gray-400" : "text-gray-600"
-                }`}
-              >
+              <p className={darkMode ? "heading-subtitle-dark" : "heading-subtitle-light"}>
                 Explore your exported data with style
               </p>
             </div>
             <div className="flex items-center gap-3">
-              <div
-                className={`flex items-center gap-2 text-sm ${
-                  darkMode ? "text-gray-400" : "text-gray-600"
-                }`}
-              >
+              <div className={darkMode ? "status-text-dark" : "status-text-light"}>
                 <span>{statusMessage}</span>
               </div>
-              <button
+
+              {/* I have disabled light mode for now, but we can add it back easily if needed */}
+              {/* <button
                 onClick={() => setDarkMode(!darkMode)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-                  darkMode
-                    ? "bg-gray-800 hover:bg-gray-700 text-gray-300"
-                    : "bg-gray-100 hover:bg-gray-200 text-gray-700"
-                }`}
+                className={darkMode ? "theme-toggle-dark" : "theme-toggle-light"}
               >
                 {darkMode ? (
                   <Sun className="h-8" size={24} />
                 ) : (
                   <Moon size={24} />
                 )}
-              </button>
+              </button> */}
               <div className="space-y-6">
                 <select
                   value={filters.sortBy}
-                  onChange={(e) => {
-                    setFilters({ ...filters, sortBy: e.target.value });
-                    setYoutubeWatchData(
-                      [...youtubeWatchData].sort((a, b) => {
-                        if (filters.sortBy === "alphabetical") {
-                          return a.title.localeCompare(b.title);
-                        } else if (filters.sortBy === "oldest") {
-                          return (
-                            new Date(a.time).getTime() -
-                            new Date(b.time).getTime()
-                          );
-                        } else {
-                          return (
-                            new Date(b.time).getTime() -
-                            new Date(a.time).getTime()
-                          );
-                        }
-                      })
-                    );
-                    setYoutubeSearchData(
-                      [...youtubeSearchData].sort((a, b) => {
-                        if (filters.sortBy === "alphabetical") {
-                          return a.title.localeCompare(b.title);
-                        } else if (filters.sortBy === "oldest") {
-                          return (
-                            new Date(a.time).getTime() -
-                            new Date(b.time).getTime()
-                          );
-                        } else {
-                          return (
-                            new Date(b.time).getTime() -
-                            new Date(a.time).getTime()
-                          );
-                        }
-                      })
-                    );
-                    setCommentsData(
-                      [...commentsData].sort((a, b) => {
-                        if (filters.sortBy === "alphabetical") {
-                          return a.text.localeCompare(b.text);
-                        } else if (filters.sortBy === "oldest") {
-                          return (
-                            new Date(a.time).getTime() -
-                            new Date(b.time).getTime()
-                          );
-                        } else {
-                          return (
-                            new Date(b.time).getTime() -
-                            new Date(a.time).getTime()
-                          );
-                        }
-                      })
-                    );
-                    setKeepsData(
-                      [...keepsData].sort((a, b) => {
-                        if (filters.sortBy === "alphabetical") {
-                          return (a?.textContent || "").localeCompare(
-                            b?.textContent || ""
-                          );
-                        } else if (filters.sortBy === "oldest") {
-                          return (
-                            new Date(a.createdTimestampUsec).getTime() -
-                            new Date(b.createdTimestampUsec).getTime()
-                          );
-                        } else {
-                          return (
-                            new Date(b.createdTimestampUsec).getTime() -
-                            new Date(a.createdTimestampUsec).getTime()
-                          );
-                        }
-                      })
-                    );
-                  }}
-                  className={`w-full p-3 rounded-lg border focus:outline-none bg-gray-800 border-gray-700 text-gray-100 ${
-                    darkMode
-                      ? "bg-gray-800 hover:bg-gray-700 text-gray-300"
-                      : "bg-gray-100 hover:bg-gray-200 text-gray-700"
-                  }`}
+                  onChange={(e) => handleSort(e.target.value)}
+                  className={darkMode ? "select-dark" : "select-light"}
                 >
                   <option value="newest">Newest First</option>
                   <option value="oldest">Oldest First</option>
@@ -321,37 +260,50 @@ const GoogleTakeoutViewer = () => {
           </div>
         </div>
       </header>
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      
+      <div className="content-container">
         {/* Navigation Tabs */}
-        <div className="flex gap-4 mb-8">
+        <div className="tabs-container">
           <TabButton
             id="youtube-watch"
             label="Watch History"
             icon={Play}
             count={youtubeWatchData.length}
+            activeTab={activeTab}
+            darkMode={darkMode}
+            onClick={setActiveTab}
           />
           <TabButton
             id="youtube-search"
             label="Search History"
             icon={Search}
             count={youtubeSearchData.length}
+            activeTab={activeTab}
+            darkMode={darkMode}
+            onClick={setActiveTab}
           />
           <TabButton
             id="comments"
             label="Comments"
             icon={MessageCircle}
             count={commentsData.length}
+            activeTab={activeTab}
+            darkMode={darkMode}
+            onClick={setActiveTab}
           />
           <TabButton
             id="notes"
             label="Keep Notes"
             icon={StickyNote}
             count={keepsData.length}
+            activeTab={activeTab}
+            darkMode={darkMode}
+            onClick={setActiveTab}
           />
         </div>
 
         {/* Search Bar */}
-        <div className="mb-8">
+        <div className="search-container">
           <SearchBar
             searchQuery={searchQuery}
             setSearchQuery={setSearchQuery}
@@ -361,9 +313,9 @@ const GoogleTakeoutViewer = () => {
         </div>
 
         {/* Content */}
-        <div className="space-y-6">
+        <div className="content-section">
           {activeTab === "youtube-watch" && (
-            <div className="flex justify-center mb-3">
+            <div className="graph-container">
               <YoutubeWatchGraph
                 youtubeWatchDataGraph={youtubeWatchDataGraph}
                 darkMode={darkMode}
@@ -418,10 +370,9 @@ const GoogleTakeoutViewer = () => {
                 />
               ))}
 
-          <div className='grid grid-cols-2 md:grid-cols-4 gap-8"'>
-            {activeTab === "notes" &&
-              !keepsDataLoading &&
-              keepsData
+          {activeTab === "notes" && !keepsDataLoading && (
+            <div className="notes-grid">
+              {keepsData
                 .filter(
                   (note: KeepEntry) =>
                     (note.textContent || note.title) &&
@@ -432,19 +383,12 @@ const GoogleTakeoutViewer = () => {
                         ?.toLowerCase()
                         .includes(searchQuery.toLowerCase()))
                 )
-
                 .slice(0, 20)
                 .map((note) => (
                   <KeepNoteCard key={note.id} note={note} darkMode={darkMode} />
                 ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Filter Options */}
-      <div className="mt-8 flex gap-3">
-        <div className="space-y-6">
-          <div></div>
+            </div>
+          )}
         </div>
       </div>
     </div>
