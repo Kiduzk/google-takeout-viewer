@@ -45,7 +45,14 @@ const GoogleTakeoutViewer = () => {
     labels: [],
     contentType: "all",
   });
-  const [currentPage, setCurrentPage] = useState(1);
+  
+  // Replace single currentPage with an object to track page per tab
+  const [paginationState, setPaginationState] = useState({
+    "youtube-watch": 1,
+    "youtube-search": 1,
+    "comments": 1,
+    "notes": 1
+  });
   const itemsPerPage = 20;
   const [youtubeDataLoading, setYoutubeDataLoading] = useState(true);
   const [youtubeSearchData, setYoutubeSearchData] = useState<YoutubeVideo[]>([]);
@@ -143,10 +150,30 @@ const GoogleTakeoutViewer = () => {
         }
       })
     );
-    setCurrentPage(1); // Reset to first page when sorting
+    setPaginationState(prevState => ({
+      ...prevState,
+      [activeTab]: 1 // Reset to first page when sorting
+    }));
   };
   
-  // Calculate total pages based on filtered data
+  // Get current page for active tab
+  const getCurrentPage = () => paginationState[activeTab as keyof typeof paginationState];
+  
+  // Set page for current tab only
+  const setCurrentPage = (page: number | ((prevPage: number) => number)) => {
+    setPaginationState(prevState => {
+      const newPage = typeof page === 'function' 
+        ? page(prevState[activeTab as keyof typeof prevState]) 
+        : page;
+        
+      return {
+        ...prevState,
+        [activeTab]: newPage
+      };
+    });
+  };
+
+  // Calculate total pages for active tab
   const getTotalPages = () => {
     let filteredDataLength = 0;
     
@@ -172,6 +199,21 @@ const GoogleTakeoutViewer = () => {
     
     return Math.ceil(filteredDataLength / itemsPerPage);
   };
+
+  // Update the tab switching function to preserve pagination
+  const handleTabChange = (tabId: string) => {
+    setActiveTab(tabId);
+    // No need to reset page when switching tabs - we're now preserving it!
+  };
+  
+  // Update the search handler to reset only current tab's page
+  useEffect(() => {
+    // Reset only the current tab's page when search query changes
+    setPaginationState(prevState => ({
+      ...prevState,
+      [activeTab]: 1
+    }));
+  }, [searchQuery]);
 
   useEffect(() => {
     const get_youtube_history = async () => {
@@ -295,7 +337,7 @@ const GoogleTakeoutViewer = () => {
             count={youtubeWatchData.length}
             activeTab={activeTab}
             darkMode={darkMode}
-            onClick={setActiveTab}
+            onClick={handleTabChange} 
           />
           <TabButton
             id="youtube-search"
@@ -304,7 +346,7 @@ const GoogleTakeoutViewer = () => {
             count={youtubeSearchData.length}
             activeTab={activeTab}
             darkMode={darkMode}
-            onClick={setActiveTab}
+            onClick={handleTabChange} 
           />
           <TabButton
             id="comments"
@@ -313,7 +355,7 @@ const GoogleTakeoutViewer = () => {
             count={commentsData.length}
             activeTab={activeTab}
             darkMode={darkMode}
-            onClick={setActiveTab}
+            onClick={handleTabChange} 
           />
           <TabButton
             id="notes"
@@ -322,7 +364,7 @@ const GoogleTakeoutViewer = () => {
             count={keepsData.length}
             activeTab={activeTab}
             darkMode={darkMode}
-            onClick={setActiveTab}
+            onClick={handleTabChange} 
           />
         </div>
 
@@ -383,7 +425,7 @@ const GoogleTakeoutViewer = () => {
               .filter((video: YoutubeVideo) =>
                 video.title.toLowerCase().includes(searchQuery.toLowerCase())
               )
-              .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+              .slice((getCurrentPage() - 1) * itemsPerPage, getCurrentPage() * itemsPerPage)
               .map((video: YoutubeVideo) => (
                 <YouTubeCard
                   key={video.id}
@@ -399,7 +441,7 @@ const GoogleTakeoutViewer = () => {
               .filter((video: YoutubeVideo) =>
                 video.title.toLowerCase().includes(searchQuery.toLowerCase())
               )
-              .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+              .slice((getCurrentPage() - 1) * itemsPerPage, getCurrentPage() * itemsPerPage)
               .map((video: YoutubeVideo) => (
                 <YouTubeCard
                   key={video.id}
@@ -415,7 +457,7 @@ const GoogleTakeoutViewer = () => {
               .filter((comment: YoutubeComment) =>
                 comment.text.toLowerCase().includes(searchQuery.toLowerCase())
               )
-              .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+              .slice((getCurrentPage() - 1) * itemsPerPage, getCurrentPage() * itemsPerPage)
               .map((comment) => (
                 <CommentCard
                   key={comment.id}
@@ -437,7 +479,7 @@ const GoogleTakeoutViewer = () => {
                         ?.toLowerCase()
                         .includes(searchQuery.toLowerCase()))
                 )
-                .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+                .slice((getCurrentPage() - 1) * itemsPerPage, getCurrentPage() * itemsPerPage)
                 .map((note) => (
                   <KeepNoteCard key={note.id} note={note} darkMode={darkMode} />
                 ))}
@@ -449,9 +491,9 @@ const GoogleTakeoutViewer = () => {
             <div className="flex justify-center items-center mt-6 gap-2">
               <button
                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
+                disabled={getCurrentPage() === 1}
                 className={`flex items-center px-3 py-2 rounded-lg border transition-colors ${
-                  currentPage === 1 
+                  getCurrentPage() === 1 
                     ? `opacity-50 ${darkMode ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"}` 
                     : darkMode 
                       ? "bg-gray-800 border-gray-700 text-gray-200 hover:bg-gray-700" 
@@ -463,14 +505,14 @@ const GoogleTakeoutViewer = () => {
               </button>
               
               <div className={`px-4 py-2 font-medium ${darkMode ? "text-gray-300" : "text-gray-800"}`}>
-                Page {currentPage} of {getTotalPages()}
+                Page {getCurrentPage()} of {getTotalPages()}
               </div>
               
               <button
                 onClick={() => setCurrentPage(p => Math.min(getTotalPages(), p + 1))}
-                disabled={currentPage === getTotalPages()}
+                disabled={getCurrentPage() === getTotalPages()}
                 className={`flex items-center px-3 py-2 rounded-lg border transition-colors ${
-                  currentPage === getTotalPages() 
+                  getCurrentPage() === getTotalPages() 
                     ? `opacity-50 ${darkMode ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"}` 
                     : darkMode 
                       ? "bg-gray-800 border-gray-700 text-gray-200 hover:bg-gray-700" 
