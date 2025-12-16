@@ -109,8 +109,14 @@ def parse_youtube_history(path):
     cached = tp.parse(cache=True, filter_type=Activity)
     history_data = []
     id = 0
+
     for i, entry in enumerate(cached):  # type: ignore
         entry: Activity
+
+
+        # Skip adds, can be dded later if needed
+        if "From Google Ads" in entry.details:
+            continue
 
         history_data.append(
             {
