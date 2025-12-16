@@ -1,0 +1,4 @@
+fastapi
+google-takeout-parser
+click
+peewee

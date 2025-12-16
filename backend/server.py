@@ -26,7 +26,7 @@ def read_youtube_comments():
     comments = tp.parse(cache=True, filter_type=CSVYoutubeComment)
     comments_formatted: list[dict] = []
     id = 0
-    for comment in comments: # type: ignore
+    for comment in comments:  # type: ignore
         # TODO: here i am just ignoring mentions in comments. If needed they could be added back in the future
         #       the commnets that have mentions have two entries instead of one
         comment: CSVYoutubeComment
@@ -50,7 +50,7 @@ def read_youtube_history():
     cached = tp.parse(cache=True, filter_type=Activity)
     youtube_history: list[dict] = []
     id = 0
-    for entry in cached: # type: ignore
+    for entry in cached:  # type: ignore
         entry: Activity
         youtube_history.append(
             {
@@ -76,7 +76,7 @@ def read_keep():
     results = tp.parse(cache=False, filter_type=Keep)
     keep_notes = []
     id = 0
-    for entry in results: # type: ignore
+    for entry in results:  # type: ignore
         entry: Keep
         keep_notes.append(
             {
@@ -95,7 +95,7 @@ def read_keep():
             }
         )
         id += 1
-    
+
     return keep_notes
 
 

@@ -6,6 +6,7 @@
 /backend/watch-history.json
 env
 venv
+.venv
 .python-version
 
 # Logs
@@ -50,3 +51,5 @@ coverage/
 # IDE-specific files (e.g., for Visual Studio Code, WebStorm)
 .vscode/
 .idea/
+
+backend/parsed_takeout_data.db
