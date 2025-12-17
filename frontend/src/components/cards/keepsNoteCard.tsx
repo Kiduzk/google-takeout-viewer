@@ -86,11 +86,7 @@ export const KeepNoteCard = ({
           isModalOpen
             ? "opacity-100 pointer-events-auto"
             : "opacity-0 pointer-events-none"
-        } ${
-          darkMode
-            ? "bg-gray-900/50"
-            : "bg-gray-200/50"
-        }`}
+        } ${darkMode ? "bg-gray-900/50" : "bg-gray-200/50"}`}
         onClick={closeModal}
       >
         {/* Modal Container */}
@@ -101,11 +97,9 @@ export const KeepNoteCard = ({
               isModalOpen && !isAnimating
                 ? "scale-100 opacity-100 translate-y-0"
                 : isAnimating && isModalOpen
-                ? "scale-110 opacity-0 translate-y-4"
-                : "scale-95 opacity-0 translate-y-4"
-            } ${
-              darkMode ? "bg-gray-800" : "bg-white"
-            }`}
+                  ? "scale-110 opacity-0 translate-y-4"
+                  : "scale-95 opacity-0 translate-y-4"
+            } ${darkMode ? "bg-gray-800" : "bg-white"}`}
             onClick={handleModalContentClick}
           >
             {/* Close button */}
@@ -142,7 +136,7 @@ export const KeepNoteCard = ({
                 </div>
               )}
 
-              {note.listContent && note.listContent.length > 0 && (
+              {note.listContent && (
                 <div className="mt-4">
                   <h3
                     className={`text-lg font-medium mb-2 ${
@@ -156,40 +150,23 @@ export const KeepNoteCard = ({
                       darkMode ? "text-gray-300" : "text-gray-600"
                     }`}
                   >
-                    {note.listContent.map((item, index) => (
-                      <li key={index} className="flex items-start gap-2">
-                        <span>{item.checked ? "☑" : "☐"}</span>
-                        <span>{item.text}</span>
-                      </li>
-                    ))}
+                    {(typeof note.listContent === "string"
+                      ? JSON.parse(note.listContent)
+                      : note.listContent
+                    ).map(
+                      (
+                        item: { checked: boolean; text: string },
+                        index: number
+                      ) => (
+                        <li key={index} className="flex items-start gap-2">
+                          <span>{item.checked ? "☑" : "☐"}</span>
+                          <span>{item.text}</span>
+                        </li>
+                      )
+                    )}
                   </ul>
                 </div>
               )}
-
-              {note.attachments && note.attachments.length > 0 && (
-                <div className="mt-4">
-                  <h3
-                    className={`text-lg font-medium mb-2 ${
-                      darkMode ? "text-gray-200" : "text-gray-700"
-                    }`}
-                  >
-                    Attachments
-                  </h3>
-                  <div className="flex flex-wrap gap-2">
-                    {note.attachments.map((attachment, index) => (
-                      <div
-                        key={index}
-                        className={`p-2 rounded border ${
-                          darkMode ? "border-gray-700" : "border-gray-200"
-                        }`}
-                      >
-                        {attachment.mimeName}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
               <div
                 className={`mt-6 text-sm ${
                   darkMode ? "text-gray-400" : "text-gray-500"

@@ -50,17 +50,25 @@ const GoogleTakeoutViewer = () => {
     comments: 1,
     notes: 1,
   });
-  const itemsPerPage = 20;
+  const itemsPerPage = 50;
   const [youtubeDataLoading, setYoutubeDataLoading] = useState(true);
   const [youtubeSearchData, setYoutubeSearchData] = useState<YoutubeVideo[]>(
     []
   );
   const [youtubeWatchData, setYoutubeWatchData] = useState<YoutubeVideo[]>([]);
+  const [youtubeWatchTotalPages, setYoutubeWatchTotalPages] = useState(1);
+  const [youtubeWatchTotalCount, setYoutubeWatchTotalCount] = useState(0);
+  const [youtubeSearchTotalPages, setYoutubeSearchTotalPages] = useState(1);
+  const [youtubeSearchTotalCount, setYoutubeSearchTotalCount] = useState(0);
   const [commentsData, setCommentsData] = useState<YoutubeComment[]>([]);
   const [commentsDataLoading, setCommentsDataLoading] = useState(true);
+  const [commentsTotalPages, setCommentsTotalPages] = useState(1);
+  const [commentsTotalCount, setCommentsTotalCount] = useState(0);
 
   const [keepsData, setKeepsData] = useState<KeepEntry[]>([]);
   const [keepsDataLoading, setKeepsDataLoading] = useState(true);
+  const [keepsTotalPages, setKeepsTotalPages] = useState(1);
+  const [keepsTotalCount, setKeepsTotalCount] = useState(0);
 
   const [statusMessage, setStatusMessage] = useState(
     "Loading watch and search history"
@@ -69,60 +77,6 @@ const GoogleTakeoutViewer = () => {
   // Sort handler function
   const handleSort = (sortValue: string) => {
     setFilters({ ...filters, sortBy: sortValue });
-
-    setYoutubeWatchData(
-      [...youtubeWatchData].sort((a, b) => {
-        if (sortValue === "alphabetical") {
-          return a.title.localeCompare(b.title);
-        } else if (sortValue === "oldest") {
-          return new Date(a.time).getTime() - new Date(b.time).getTime();
-        } else {
-          return new Date(b.time).getTime() - new Date(a.time).getTime();
-        }
-      })
-    );
-
-    setYoutubeSearchData(
-      [...youtubeSearchData].sort((a, b) => {
-        if (sortValue === "alphabetical") {
-          return a.title.localeCompare(b.title);
-        } else if (sortValue === "oldest") {
-          return new Date(a.time).getTime() - new Date(b.time).getTime();
-        } else {
-          return new Date(b.time).getTime() - new Date(a.time).getTime();
-        }
-      })
-    );
-
-    setCommentsData(
-      [...commentsData].sort((a, b) => {
-        if (sortValue === "alphabetical") {
-          return a.text.localeCompare(b.text);
-        } else if (sortValue === "oldest") {
-          return new Date(a.time).getTime() - new Date(b.time).getTime();
-        } else {
-          return new Date(b.time).getTime() - new Date(a.time).getTime();
-        }
-      })
-    );
-
-    setKeepsData(
-      [...keepsData].sort((a, b) => {
-        if (sortValue === "alphabetical") {
-          return (a?.textContent || "").localeCompare(b?.textContent || "");
-        } else if (sortValue === "oldest") {
-          return (
-            new Date(a.createdTimestampUsec).getTime() -
-            new Date(b.createdTimestampUsec).getTime()
-          );
-        } else {
-          return (
-            new Date(b.createdTimestampUsec).getTime() -
-            new Date(a.createdTimestampUsec).getTime()
-          );
-        }
-      })
-    );
     setPaginationState(() => ({
       "youtube-watch": 1,
       "youtube-search": 1,
@@ -136,13 +90,9 @@ const GoogleTakeoutViewer = () => {
     paginationState[activeTab as keyof typeof paginationState];
 
   // Set page for current tab only
-  const setCurrentPage = (page: number | ((prevPage: number) => number)) => {
+  const setCurrentPage = (page: (prevPage: number) => number) => {
     setPaginationState((prevState) => {
-      const newPage =
-        typeof page === "function"
-          ? page(prevState[activeTab as keyof typeof prevState])
-          : page;
-
+      const newPage = page(prevState[activeTab as keyof typeof prevState]);
       return {
         ...prevState,
         [activeTab]: newPage,
@@ -150,40 +100,23 @@ const GoogleTakeoutViewer = () => {
     });
   };
 
-  // Calculate total pages for active tab
+  // Gets total pages for active tab, default to 1
   const getTotalPages = () => {
-    let filteredDataLength = 0;
-
     if (activeTab === "youtube-watch") {
-      filteredDataLength = youtubeWatchData.filter((video) =>
-        video.title.toLowerCase().includes(searchQuery.toLowerCase())
-      ).length;
+      return youtubeWatchTotalPages;
     } else if (activeTab === "youtube-search") {
-      filteredDataLength = youtubeSearchData.filter((video) =>
-        video.title.toLowerCase().includes(searchQuery.toLowerCase())
-      ).length;
+      return youtubeSearchTotalPages;
     } else if (activeTab === "comments") {
-      filteredDataLength = commentsData.filter((comment) =>
-        comment.text.toLowerCase().includes(searchQuery.toLowerCase())
-      ).length;
+      return commentsTotalPages;
     } else if (activeTab === "notes") {
-      filteredDataLength = keepsData.filter(
-        (note) =>
-          (note.textContent || note.title) &&
-          (note.textContent
-            ?.toLowerCase()
-            .includes(searchQuery.toLowerCase()) ||
-            note.title?.toLowerCase().includes(searchQuery.toLowerCase()))
-      ).length;
+      return keepsTotalPages;
     }
-
-    return Math.ceil(filteredDataLength / itemsPerPage);
+    return 1;
   };
 
   // Update the tab switching function to preserve pagination
   const handleTabChange = (tabId: string) => {
     setActiveTab(tabId);
-    // No need to reset page when switching tabs - we're now preserving it!
   };
 
   // Update the search handler to reset only current tab's page
@@ -195,63 +128,183 @@ const GoogleTakeoutViewer = () => {
     }));
   }, [searchQuery]);
 
+
+  // Load all data on mount
   useEffect(() => {
-    const get_youtube_history = async () => {
+    const loadAllData = async () => {
       try {
-        // Youtube watch + search history
-        let result = await axios.get("http://127.0.0.1:8000/youtube_history");
-        let data_no_ads = result.data.filter(
-          (video: YoutubeVideo) => video.details[0] != "From Google Ads"
-        );
-        // for now I am exlcuidng ads, but we can always get them back
-        setYoutubeWatchData(
-          data_no_ads
-            .filter((video: YoutubeVideo) =>
-              video.title.toLowerCase().includes("watched")
-            )
-            .map((video: YoutubeVideo) => {
-              return {
-                ...video,
-                title: video.title.split(" ").slice(1).join(" "),
-              };
-            })
-        );
+        const [watch, search, comments, keeps] = await Promise.all([
+          axios.get("http://127.0.0.1:8000/youtube_history", {
+            params: { page: 1, per_page: itemsPerPage },
+          }),
+          axios.get("http://127.0.0.1:8000/youtube_search", {
+            params: { page: 1, per_page: itemsPerPage },
+          }),
+          axios.get("http://127.0.0.1:8000/youtube_comments", {
+            params: { page: 1, per_page: itemsPerPage },
+          }),
+          axios.get("http://127.0.0.1:8000/google_keep", {
+            params: { page: 1, per_page: itemsPerPage },
+          }),
+        ]);
 
-        setYoutubeSearchData(
-          data_no_ads
-            .filter((video: YoutubeVideo) =>
-              video.title.toLowerCase().includes("searched")
-            )
-            .map((video: YoutubeVideo) => {
-              return {
-                ...video,
-                title: video.title.split(" ").slice(2).join(" "),
-              };
-            })
-        );
+        // Set watch history
+        setYoutubeWatchData(watch.data.data);
+        setYoutubeWatchTotalPages(watch.data.pagination.pages);
+        setYoutubeWatchTotalCount(watch.data.pagination.total);
 
-        // Youtube comment history
-        setStatusMessage("Loading comment history");
-        result = await axios.get("http://127.0.0.1:8000/youtube_comments");
-        setCommentsData(result.data);
-        setStatusMessage("Done");
+        // Set search history
+        setYoutubeSearchData(search.data.data);
+        setYoutubeSearchTotalPages(search.data.pagination.pages);
+        setYoutubeSearchTotalCount(search.data.pagination.total);
 
-        // Keeps data
-        setStatusMessage("Loading Keeps data");
-        result = await axios.get("http://127.0.0.1:8000/google_keep");
-        setKeepsData(result.data);
-      } catch (err) {
-        console.log(err);
-        setStatusMessage("Error loading data. Check console logs.");
-      } finally {
+        // Set comments
+        setCommentsData(comments.data.data);
+        setCommentsTotalPages(comments.data.pagination.pages);
+        setCommentsTotalCount(comments.data.pagination.total);
+
+        // Set keeps
+        setKeepsData(keeps.data.data);
+        setKeepsTotalPages(keeps.data.pagination.pages);
+        setKeepsTotalCount(keeps.data.pagination.total);
+
         setYoutubeDataLoading(false);
         setCommentsDataLoading(false);
         setKeepsDataLoading(false);
-        setStatusMessage("Data loaded");
+      } catch (err) {
+        console.error("Error loading data:", err);
+        setStatusMessage("Error loading data.");
       }
     };
-    get_youtube_history();
+    loadAllData();
   }, []);
+
+  // Fetch YouTube watch history
+  useEffect(() => {
+    const fetchWatchHistory = async () => {
+      try {
+        setStatusMessage("Loading watch history");
+        const sort = filters.sortBy === "oldest" ? "oldest" : "newest";
+        const result = await axios.get(
+          "http://127.0.0.1:8000/youtube_history",
+          {
+            params: {
+              page: paginationState["youtube-watch"],
+              per_page: itemsPerPage,
+              search: searchQuery,
+              sort: sort,
+            },
+          }
+        );
+
+        const responseData = result.data;
+        setYoutubeWatchData(responseData.data);
+        setYoutubeWatchTotalPages(responseData.pagination.pages);
+        if (activeTab === "youtube-watch") {
+          setYoutubeWatchTotalCount(responseData.pagination.total);
+        }
+        setYoutubeDataLoading(false);
+        setStatusMessage("Data loaded");
+      } catch (err) {
+        console.log("Error fetching watch history:", err);
+        setStatusMessage("Error loading watch history.");
+        setYoutubeDataLoading(false);
+      }
+    };
+    fetchWatchHistory();
+  }, [paginationState["youtube-watch"], searchQuery, filters.sortBy, activeTab]);
+
+  // Fetch YouTube search history
+  useEffect(() => {
+    const fetchSearchHistory = async () => {
+      try {
+        const sort = filters.sortBy === "oldest" ? "oldest" : "newest";
+        const result = await axios.get("http://127.0.0.1:8000/youtube_search", {
+          params: {
+            page: paginationState["youtube-search"],
+            per_page: itemsPerPage,
+            search: searchQuery,
+            sort: sort,
+          },
+        });
+
+        const responseData = result.data;
+        setYoutubeSearchData(responseData.data);
+        setYoutubeSearchTotalPages(responseData.pagination.pages);
+        if (activeTab === "youtube-search") {
+          setYoutubeSearchTotalCount(responseData.pagination.total);
+        }
+        setStatusMessage("Data loaded");
+      } catch (err) {
+        console.log("Error fetching search history:", err);
+        setStatusMessage("Error loading search history.");
+      }
+    };
+    fetchSearchHistory();
+  }, [paginationState["youtube-search"], searchQuery, filters.sortBy, activeTab]);
+
+  // Fetch YouTube comments
+  useEffect(() => {
+    const fetchComments = async () => {
+      try {
+        setStatusMessage("Loading comment history");
+        const sort = filters.sortBy === "oldest" ? "oldest" : "newest";
+        const result = await axios.get(
+          "http://127.0.0.1:8000/youtube_comments",
+          {
+            params: {
+              page: paginationState["comments"],
+              per_page: itemsPerPage,
+              search: searchQuery,
+              sort: sort,
+            },
+          }
+        );
+        const responseData = result.data;
+        setCommentsData(responseData.data);
+        setCommentsTotalPages(responseData.pagination.pages);
+        if (activeTab === "comments") {
+          setCommentsTotalCount(responseData.pagination.total);
+        }
+        setCommentsDataLoading(false);
+        setStatusMessage("Data loaded");
+      } catch (err) {
+        console.log("Error fetching comments:", err);
+        setStatusMessage("Error loading comments.");
+      }
+    };
+    fetchComments();
+  }, [paginationState["comments"], searchQuery, filters.sortBy, activeTab]);
+
+  // Fetch Google Keep notes
+  useEffect(() => {
+    const fetchKeeps = async () => {
+      try {
+        setStatusMessage("Loading Keeps data");
+        const sort = filters.sortBy === "oldest" ? "oldest" : "newest";
+        const result = await axios.get("http://127.0.0.1:8000/google_keep", {
+          params: {
+            page: paginationState["notes"],
+            per_page: itemsPerPage,
+            search: searchQuery,
+            sort: sort,
+          },
+        });
+        const responseData = result.data;
+        setKeepsData(responseData.data);
+        setKeepsTotalPages(responseData.pagination.pages);
+        if (activeTab === "notes") {
+          setKeepsTotalCount(responseData.pagination.total);
+        }
+        setKeepsDataLoading(false);
+        setStatusMessage("Data loaded");
+      } catch (err) {
+        console.log("Error fetching keeps:", err);
+        setStatusMessage("Error loading keeps.");
+      }
+    };
+    fetchKeeps();
+  }, [paginationState["notes"], searchQuery, filters.sortBy, activeTab]);
 
   return (
     <div className={darkMode ? "app-bg-dark" : "app-bg-light"}>
@@ -300,7 +353,7 @@ const GoogleTakeoutViewer = () => {
             id="youtube-watch"
             label="Watch History"
             icon={Play}
-            count={youtubeWatchData.length}
+            count={youtubeWatchTotalCount}
             activeTab={activeTab}
             darkMode={darkMode}
             onClick={handleTabChange}
@@ -309,7 +362,7 @@ const GoogleTakeoutViewer = () => {
             id="youtube-search"
             label="Search History"
             icon={Search}
-            count={youtubeSearchData.length}
+            count={youtubeSearchTotalCount}
             activeTab={activeTab}
             darkMode={darkMode}
             onClick={handleTabChange}
@@ -318,7 +371,7 @@ const GoogleTakeoutViewer = () => {
             id="comments"
             label="Comments"
             icon={MessageCircle}
-            count={commentsData.length}
+            count={commentsTotalCount}
             activeTab={activeTab}
             darkMode={darkMode}
             onClick={handleTabChange}
@@ -327,7 +380,7 @@ const GoogleTakeoutViewer = () => {
             id="notes"
             label="Keep Notes"
             icon={StickyNote}
-            count={keepsData.length}
+            count={keepsTotalCount}
             activeTab={activeTab}
             darkMode={darkMode}
             onClick={handleTabChange}
@@ -365,7 +418,6 @@ const GoogleTakeoutViewer = () => {
               >
                 <option value="newest">Newest First</option>
                 <option value="oldest">Oldest First</option>
-                <option value="alphabetical">A to Z</option>
               </select>
             </div>
 
@@ -391,80 +443,41 @@ const GoogleTakeoutViewer = () => {
 
           {activeTab === "youtube-watch" &&
             !youtubeDataLoading &&
-            youtubeWatchData
-              .filter((video: YoutubeVideo) =>
-                video.title.toLowerCase().includes(searchQuery.toLowerCase())
-              )
-              .slice(
-                (getCurrentPage() - 1) * itemsPerPage,
-                getCurrentPage() * itemsPerPage
-              )
-              .map((video: YoutubeVideo) => (
-                <YouTubeCard
-                  key={video.id}
-                  video={video}
-                  cardType=""
-                  darkMode={darkMode}
-                />
-              ))}
+            youtubeWatchData.map((video: YoutubeVideo) => (
+              <YouTubeCard
+                key={video.id}
+                video={video}
+                cardType=""
+                darkMode={darkMode}
+              />
+            ))}
 
           {activeTab === "youtube-search" &&
             !youtubeDataLoading &&
-            youtubeSearchData
-              .filter((video: YoutubeVideo) =>
-                video.title.toLowerCase().includes(searchQuery.toLowerCase())
-              )
-              .slice(
-                (getCurrentPage() - 1) * itemsPerPage,
-                getCurrentPage() * itemsPerPage
-              )
-              .map((video: YoutubeVideo) => (
-                <YouTubeCard
-                  key={video.id}
-                  video={video}
-                  cardType="search"
-                  darkMode={darkMode}
-                />
-              ))}
+            youtubeSearchData.map((video: YoutubeVideo) => (
+              <YouTubeCard
+                key={video.id}
+                video={video}
+                cardType="search"
+                darkMode={darkMode}
+              />
+            ))}
 
           {activeTab === "comments" &&
             !commentsDataLoading &&
-            commentsData
-              .filter((comment: YoutubeComment) =>
-                comment.text.toLowerCase().includes(searchQuery.toLowerCase())
-              )
-              .slice(
-                (getCurrentPage() - 1) * itemsPerPage,
-                getCurrentPage() * itemsPerPage
-              )
-              .map((comment) => (
-                <CommentCard
-                  key={comment.id}
-                  comment={comment}
-                  darkMode={darkMode}
-                />
-              ))}
+            commentsData.map((comment) => (
+              <CommentCard
+                key={comment.id}
+                comment={comment}
+                darkMode={darkMode}
+              />
+            ))}
 
           {activeTab === "notes" && !keepsDataLoading && (
             <div className="notes-grid">
-              {keepsData
-                .filter(
-                  (note: KeepEntry) =>
-                    (note.textContent || note.title) &&
-                    (note.textContent
-                      ?.toLowerCase()
-                      .includes(searchQuery.toLowerCase()) ||
-                      note.title
-                        ?.toLowerCase()
-                        .includes(searchQuery.toLowerCase()))
-                )
-                .slice(
-                  (getCurrentPage() - 1) * itemsPerPage,
-                  getCurrentPage() * itemsPerPage
-                )
-                .map((note) => (
-                  <KeepNoteCard key={note.id} note={note} darkMode={darkMode} />
-                ))}
+              {keepsData.map((note) => (
+                <KeepNoteCard key={note.id} note={note} darkMode={darkMode} />
+              ))}
             </div>
           )}
 

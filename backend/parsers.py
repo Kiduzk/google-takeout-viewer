@@ -156,13 +156,29 @@ def parse_keep(path):
     for i, entry in enumerate(results):  # type: ignore
         entry: Keep
 
+        # Convert listContent to JSON serializable format
+        list_content_json = None
+        if entry.listContent:
+            try:
+                list_content_json = json.dumps([
+                    {
+                        "text": item.text,
+                        "textHtml": item.textHtml,
+                        "checked": item.isChecked
+                    }
+                    for item in entry.listContent
+                ])
+            except Exception as e:
+                print(f"Error serializing listContent: {e}")
+                list_content_json = None
+
         keep_data.append(
             {
                 "entryId": id,
                 "title": entry.title,
                 "updatedTime": entry.updated_dt,
                 "createdTime": entry.created_dt,
-                "listContent": entry.listContent,
+                "listContent": list_content_json,
                 "textContent": entry.textContent,
                 "textContentHtml": entry.textContentHtml,
                 "color": entry.color,
