@@ -42,3 +42,17 @@ export interface KeepEntry {
   isPinned: boolean;
   isArchived: boolean;
 }
+
+export type Tab = "youtube-watch" | "youtube-search" | "comments" | "notes";
+
+export interface PaginationInfo {
+  page: number;
+  per_page: number;
+  total: number;
+  pages: number;
+}
+
+export interface ApiResponse {
+  data: [];
+  pagination: PaginationInfo;
+}
