@@ -2,9 +2,20 @@ import click
 import subprocess
 import time
 import webbrowser
-import sys
+import os
+import zipfile
+import tempfile
+import shutil
 from pathlib import Path
-from parsers import parse_youtube_comments, parse_youtube_history, parse_keep, YoutubeCommentDatabase, YoutubeHistoryDatabase, KeepNotesDatabase, db
+from parsers import (
+    parse_youtube_comments,
+    parse_youtube_history,
+    parse_keep,
+    YoutubeCommentDatabase,
+    YoutubeHistoryDatabase,
+    KeepNotesDatabase,
+    db,
+)
 
 
 @click.group()
@@ -21,17 +32,47 @@ def parse(path):
     """
     Processes a google takeout and caches the values into an sqlite database
     Supports two options:
-        1) The takeout as a zip
-        2) The extracted takeout. In this case, we just parse through the current directory
-        for any files that could potentially be from a takeout
+        1) The takeout as a zip file
+        2) The extracted takeout folder
     """
-    parse_youtube_comments(path)
-    parse_youtube_history(path)
-    parse_keep(path)
+    path_obj = Path(path)
+    temp_dir = None
+    parse_path = path
+
+    try:
+        # Check if path is a ZIP file
+        if path_obj.is_file() and zipfile.is_zipfile(path):
+            click.echo(f"Extracting ZIP file: {path}")
+            temp_dir = tempfile.mkdtemp()
+            with zipfile.ZipFile(path, "r") as zip_ref:
+                zip_ref.extractall(temp_dir)
+            parse_path = os.path.join(temp_dir, "Takeout")
+            click.echo(f"Extracted to: {temp_dir}")
+        elif path_obj.is_dir():
+            click.echo(f"Parsing directory: {path}")
+        else:
+            click.echo(f"Error: Path must be a directory or ZIP file", err=True)
+            return
+
+        # Parse the data
+        click.echo("Parsing YouTube comments...")
+        parse_youtube_comments(parse_path)
+        click.echo("Parsing YouTube history...")
+        parse_youtube_history(parse_path)
+        click.echo("Parsing Google Keep notes...")
+        parse_keep(parse_path)
+
+        click.echo("Parsing complete!")
+
+    finally:
+        # Clean up temporary directory
+        if temp_dir and Path(temp_dir).exists():
+            click.echo(f"Cleaning up temporary files...")
+            shutil.rmtree(temp_dir)
 
 
-@cli.command("clear-database")
-def clear_database():
+@cli.command("clear")
+def clear():
     """
     Clears the parsed takeout database.
     """
@@ -41,15 +82,15 @@ def clear_database():
         YoutubeHistoryDatabase,
         KeepNotesDatabase,
     ]
-    
+
     try:
         click.echo("Clearing databses...")
-        
+
         # Delete all records from each table
         for model in DATABASE_MODELS:
             count = model.delete().execute()
             click.echo(f"  Cleared {model.__name__}: {count} records deleted")
-        
+
         click.echo("Database cleared successfully!")
     except Exception as e:
         click.echo(f"Error clearing cache: {e}", err=True)
@@ -64,26 +105,26 @@ def view_takeout():
     """
     backend_process = None
     frontend_process = None
-    
+
     try:
         # Get the project root and paths
         backend_dir = Path(__file__).parent
         frontend_dir = backend_dir.parent / "frontend"
-        
+
         click.echo("Starting servers...")
-        
+
         # Start FastAPI backend server
         click.echo("Starting FastAPI server on http://127.0.0.1:8000")
         backend_process = subprocess.Popen(
             ["python", "-m", "fastapi", "dev", "server.py"],
             cwd=str(backend_dir),
             stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE
+            stderr=subprocess.PIPE,
         )
-        
+
         # Wait for backend to start
         time.sleep(1)
-        
+
         # Start frontend dev server
         click.echo("Starting frontend server on http://localhost:5173")
         frontend_process = subprocess.Popen(
@@ -91,21 +132,21 @@ def view_takeout():
             cwd=str(frontend_dir),
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            shell=True
+            shell=True,
         )
-        
+
         # Wait for frontend to start
         time.sleep(1)
-        
+
         # Open browser
         click.echo("Opening browser...")
         webbrowser.open("http://localhost:5173")
-        
+
         click.echo("\nServers running!")
         click.echo("  Backend:  http://127.0.0.1:8000")
         click.echo("  Frontend: http://localhost:5173")
         click.echo("\nPress Ctrl+C to stop servers")
-        
+
         # Keep the processes running
         while True:
             time.sleep(1)
@@ -115,10 +156,10 @@ def view_takeout():
             if frontend_process.poll() is not None:
                 click.echo("\nFrontend server stopped unexpectedly")
                 break
-    
+
     except Exception as e:
         click.echo(f"Error: {e}", err=True)
-    
+
     finally:
         # Cleanup: terminate both processes
         if backend_process and backend_process.poll() is None:
@@ -128,7 +169,7 @@ def view_takeout():
                 backend_process.wait(timeout=5)
             except subprocess.TimeoutExpired:
                 backend_process.kill()
-        
+
         if frontend_process and frontend_process.poll() is None:
             click.echo("Stopping frontend server...")
             frontend_process.terminate()
@@ -136,7 +177,7 @@ def view_takeout():
                 frontend_process.wait(timeout=5)
             except subprocess.TimeoutExpired:
                 frontend_process.kill()
-        
+
         click.echo("Servers stopped.")
 
 
