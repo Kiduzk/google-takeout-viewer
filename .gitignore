@@ -1,55 +1,30 @@
-/backend/testing.db
-/backend/__pycache__
-/backend/search-history.html
-/backend/watch-history.html
-/backend/search-history.json
-/backend/watch-history.json
-env
-venv
-.venv
-.python-version
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+*.db
 
-# Logs
-logs/
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
-
-# Dependency directories
+# Node / Frontend
 node_modules/
+src/frontend/dist/
+npm-debug.log*
 
 # Build artifacts
 dist/
 build/
-out/
-*.js
-*.js.map
-*.d.ts
 
-# Configuration files
-.env
-.env.*.local
+# IDE
 .vscode/
-!.vscode/extensions.json # Keep this if you want to share recommended extensions
 .idea/
+*.sublime-project
 
-# Operating System files
+# Environment
+.env
+.env.local
+
+# OS
 .DS_Store
 Thumbs.db
-
-# Editor-specific files
-*.sublime-project
-*.sublime-workspace
-.history/
-
-# Test coverage
-coverage/
-
-# IDE-specific files (e.g., for Visual Studio Code, WebStorm)
-.vscode/
-.idea/
-
-backend/parsed_takeout_data.db

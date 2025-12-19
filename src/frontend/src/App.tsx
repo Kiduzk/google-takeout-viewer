@@ -8,7 +8,7 @@ import { TabsSection } from "./components/tabsSection";
 import { SortAndScrollControls } from "./components/sortAndScrollControls";
 import { ContentRenderer } from "./components/contentRenderer";
 import { Pagination } from "./components/pagination";
-import { ScrollToTop } from "./components/ScrollToTop";
+import { ScrollToTop } from "./components/scrollToTop";
 
 import type {
   YoutubeVideo,
@@ -138,16 +138,16 @@ const GoogleTakeoutViewer = () => {
     const loadAllData = async () => {
       try {
         const [watch, search, comments, keeps] = await Promise.all([
-          axios.get("http://127.0.0.1:8000/youtube_history", {
+          axios.get("/youtube_history", {
             params: { page: 1, per_page: itemsPerPage },
           }),
-          axios.get("http://127.0.0.1:8000/youtube_search", {
+          axios.get("/youtube_search", {
             params: { page: 1, per_page: itemsPerPage },
           }),
-          axios.get("http://127.0.0.1:8000/youtube_comments", {
+          axios.get("/youtube_comments", {
             params: { page: 1, per_page: itemsPerPage },
           }),
-          axios.get("http://127.0.0.1:8000/google_keep", {
+          axios.get("/google_keep", {
             params: { page: 1, per_page: itemsPerPage },
           }),
         ]);
@@ -204,7 +204,7 @@ const GoogleTakeoutViewer = () => {
         setStatusMessage(`Loading ${activeTab} data`);
         const sort = filters.sortBy === "oldest" ? "oldest" : "newest";
         const result = await axios.get(
-          `http://127.0.0.1:8000/${tabToUrlAddress[activeTab]}`,
+          `/${tabToUrlAddress[activeTab]}`,
           {
             params: {
               page: paginationState[activeTab],

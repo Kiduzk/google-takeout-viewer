@@ -7,14 +7,13 @@ import zipfile
 import tempfile
 import shutil
 from pathlib import Path
-from parsers import (
+from google_takeout_viewer.parsers import (
     parse_youtube_comments,
     parse_youtube_history,
     parse_keep,
     YoutubeCommentDatabase,
     YoutubeHistoryDatabase,
     KeepNotesDatabase,
-    db,
 )
 
 
@@ -57,12 +56,20 @@ def parse(path):
         # Parse the data
         click.echo("Parsing YouTube comments...")
         parse_youtube_comments(parse_path)
+        comments_count = YoutubeCommentDatabase.select().count()
+        
         click.echo("Parsing YouTube history...")
         parse_youtube_history(parse_path)
+        history_count = YoutubeHistoryDatabase.select().count()
+        
         click.echo("Parsing Google Keep notes...")
         parse_keep(parse_path)
+        keep_count = KeepNotesDatabase.select().count()
 
-        click.echo("Parsing complete!")
+        click.echo("\nParsing complete!")
+        click.echo(f"  YouTube Comments: {comments_count}")
+        click.echo(f"  YouTube History: {history_count}")
+        click.echo(f"  Google Keep Notes: {keep_count}")
 
     finally:
         # Clean up temporary directory
@@ -100,85 +107,57 @@ def clear():
 def view_takeout():
     """
     View the parsed takeout files in the browser.
-    Will spin up a FastAPI backend server and a frontend dev server,
-    then open the browser to view the data.
+    Will start a FastAPI backend server and open the browser.
     """
     backend_process = None
-    frontend_process = None
 
     try:
-        # Get the project root and paths
+        # Get the project root (parent of src)
         backend_dir = Path(__file__).parent
-        frontend_dir = backend_dir.parent / "frontend"
+        src_dir = backend_dir.parent
 
-        click.echo("Starting servers...")
+        click.echo("Starting server...")
 
-        # Start FastAPI backend server
-        click.echo("Starting FastAPI server on http://127.0.0.1:8000")
+        # Start FastAPI backend server with uvicorn
+        click.echo("Starting server on http://127.0.0.1:8000")
         backend_process = subprocess.Popen(
-            ["python", "-m", "fastapi", "dev", "server.py"],
-            cwd=str(backend_dir),
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            ["python", "-m", "uvicorn", "google_takeout_viewer.server:app", "--host", "127.0.0.1", "--port", "8000"],
+            cwd=str(src_dir),
         )
 
         # Wait for backend to start
-        time.sleep(1)
-
-        # Start frontend dev server
-        click.echo("Starting frontend server on http://localhost:5173")
-        frontend_process = subprocess.Popen(
-            "npm run dev",
-            cwd=str(frontend_dir),
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            shell=True,
-        )
-
-        # Wait for frontend to start
-        time.sleep(1)
+        time.sleep(3)
 
         # Open browser
         click.echo("Opening browser...")
-        webbrowser.open("http://localhost:5173")
+        webbrowser.open("http://127.0.0.1:8000")
 
-        click.echo("\nServers running!")
-        click.echo("  Backend:  http://127.0.0.1:8000")
-        click.echo("  Frontend: http://localhost:5173")
-        click.echo("\nPress Ctrl+C to stop servers")
+        click.echo("\nServer running on http://127.0.0.1:8000")
+        click.echo("Press Ctrl+C to stop server")
 
-        # Keep the processes running
+        # Keep the process running
         while True:
             time.sleep(1)
             if backend_process.poll() is not None:
-                click.echo("\nBackend server stopped unexpectedly")
-                break
-            if frontend_process.poll() is not None:
-                click.echo("\nFrontend server stopped unexpectedly")
+                click.echo("\nServer stopped")
                 break
 
+    except KeyboardInterrupt:
+        click.echo("\n\nShutting down...")
     except Exception as e:
         click.echo(f"Error: {e}", err=True)
 
     finally:
-        # Cleanup: terminate both processes
+        # Cleanup: terminate process
         if backend_process and backend_process.poll() is None:
-            click.echo("\nStopping backend server...")
+            click.echo("Stopping server...")
             backend_process.terminate()
             try:
                 backend_process.wait(timeout=5)
             except subprocess.TimeoutExpired:
                 backend_process.kill()
 
-        if frontend_process and frontend_process.poll() is None:
-            click.echo("Stopping frontend server...")
-            frontend_process.terminate()
-            try:
-                frontend_process.wait(timeout=5)
-            except subprocess.TimeoutExpired:
-                frontend_process.kill()
-
-        click.echo("Servers stopped.")
+        click.echo("Server stopped.")
 
 
 if __name__ == "__main__":

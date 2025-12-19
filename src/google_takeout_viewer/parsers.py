@@ -1,10 +1,15 @@
 import json
+import os
+from pathlib import Path
 from fastapi.middleware.cors import CORSMiddleware
 from google_takeout_parser.path_dispatch import TakeoutParser
 from google_takeout_parser.models import Activity, CSVYoutubeComment, Keep
 from peewee import *
 
-db = SqliteDatabase("parsed_takeout_data.db")
+# Store database in user's home directory
+db_path = Path.home() / ".google-takeout-viewer" / "parsed_takeout_data.db"
+db_path.parent.mkdir(parents=True, exist_ok=True)
+db = SqliteDatabase(str(db_path))
 SQL_UPDATE_BATCH_SIZE = 900
 
 

@@ -1,15 +1,16 @@
 import json
+import os
 from typing import Union
+from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from time import time
-from parsers import YoutubeCommentDatabase, YoutubeHistoryDatabase, KeepNotesDatabase
+from google_takeout_viewer.parsers import YoutubeCommentDatabase, YoutubeHistoryDatabase, KeepNotesDatabase
 
-
-origins = ["http://localhost:5173"]
 
 app = FastAPI()
-app.add_middleware(CORSMiddleware, allow_origins=origins)
+app.add_middleware(CORSMiddleware, allow_origins=["*"])
 
 
 def paginate(query, page: int = 1, per_page: int = 50):
@@ -201,3 +202,9 @@ def read_keep(
 @app.get("/items/{item_id}")
 def read_item(item_id: int, q: Union[str, None] = None):
     return {"item_id": item_id, "q": q}
+
+
+# Serve built frontend 
+frontend_build_dir = Path(__file__).parent / "frontend_build"
+if frontend_build_dir.exists():
+    app.mount("/", StaticFiles(directory=str(frontend_build_dir), html=True), name="frontend")

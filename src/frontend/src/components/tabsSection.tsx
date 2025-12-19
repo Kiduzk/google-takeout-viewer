@@ -1,5 +1,5 @@
 import { Play, Search, MessageCircle, StickyNote } from "lucide-react";
-import { TabButton } from "./TabButton";
+import { TabButton } from "./tabButton";
 import type { Tab } from "../types";
 
 export const TabsSection = ({
