@@ -1,6 +1,10 @@
 # google-takeout-viewer
 
-A command-line tool to visualize your Google Takeout data. Browse your YouTube history, comments, and Google Keep notes in an interactive web interface.
+A command-line tool to visualize your Google Takeout data. 
+
+## What is google takeout?
+
+You can export your data from google services and products as a takeout zip file. This will contain youtube histories, notes, etc... 
 
 ## Installation
 
@@ -16,7 +20,7 @@ pip install google-takeout-viewer
 ```bash
 takeout-viewer parse /path/to/takeout.zip
 ```
-You can parse many takeouts as you want. Each parse command will add the parsed info into an SQLite command.
+You can parse many takeouts as you want. Each parse command will add the parsed info into an SQLite command. For the parsing logic, it utilizes the takeout parser package: https://github.com/purarue/google_takeout_parser. 
 
 3. **View in browser**:
 ```bash
@@ -40,6 +44,17 @@ Opens http://127.0.0.1:8000 with your data
 
 ## In the works / Future goals
 
-We can grow the codebase to be able to parse and view any data.
+I see two main ways to expand this project.
+1) Support more data formats like location history, music history, emails, etc ...
+2) Add visualizations for existing formats. We could have for example graphs or charts.
 
-## Requirements
+## Contributions
+
+Any contribution and feedback is welcome! I am hoping to create a comprehensive way to easily browse and view takeout files. 
+
+## Tech Stack
+- **Backend**: FastAPI + Peewee ORM + SQLite
+- **Frontend**: React + TypeScript + Vite
+- **CLI**: Click
+- **Parsing**: google-takeout-parser
+
