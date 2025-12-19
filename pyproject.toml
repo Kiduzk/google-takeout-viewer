@@ -42,7 +42,7 @@ Repository = "https://github.com/Kiduzk/google-takeout-viewer"
 Issues = "https://github.com/Kiduzk/google-takeout-viewer/issues"
 
 [project.scripts]
-takeout-vis = "google_takeout_viewer.cli:cli"
+takeout-viewer = "google_takeout_viewer.cli:cli"
 
 [tool.setuptools]
 packages = ["google_takeout_viewer"]
