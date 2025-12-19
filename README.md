@@ -1,6 +1,6 @@
 # google-takeout-viewer
 
-A command-line tool to visualize your Google Takeout data. 
+A command-line tool to view your Google Takeout data. 
 
 ## What is google takeout?
 
