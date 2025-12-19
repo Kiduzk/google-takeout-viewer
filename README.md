@@ -6,8 +6,6 @@ A CLI-managed local web app for viewing your Google Takeout data in the browser.
 
 You can export your data from google services and products as a takeout zip file. This will contain youtube histories, notes, etc... 
 
-<img width="900" alt="image" src="https://github.com/user-attachments/assets/42997283-d283-467e-a793-37bf11f41453" />
-
 ## Installation
 
 ```bash
@@ -29,7 +27,9 @@ You can parse many takeouts as you want. Each parse command will add the parsed 
 takeout-viewer view
 ```
 
-Opens http://127.0.0.1:8000 with your data
+Opens http://127.0.0.1:8000 with your data:
+
+<img width="900" alt="image" src="https://github.com/user-attachments/assets/42997283-d283-467e-a793-37bf11f41453" />
 
 ## Commands
 
