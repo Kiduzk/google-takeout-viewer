@@ -79,6 +79,9 @@ def parse_youtube_comments(path):
         # NOTE: I am just ignoring mentions in comments. If needed they could be added back in the future
         #       the commnets that have mentions have two entries instead of one
 
+        if isinstance(comment, ValueError):
+            continue
+
         comment: CSVYoutubeComment
         text = json.loads("[" + comment.contentJSON + "]")[-1]["text"]
         comments_data.append(
@@ -116,8 +119,10 @@ def parse_youtube_history(path):
     id = 0
 
     for i, entry in enumerate(cached):  # type: ignore
+        if isinstance(entry, ValueError):
+            continue
+            
         entry: Activity
-
 
         # Skip adds, can be dded later if needed
         if "From Google Ads" in entry.details:
@@ -159,8 +164,10 @@ def parse_keep(path):
     keep_data = []
     id = 0
     for i, entry in enumerate(results):  # type: ignore
-        entry: Keep
+        if isinstance(entry, ValueError):
+            continue
 
+        entry: Keep
         # Convert listContent to JSON serializable format
         list_content_json = None
         if entry.listContent:
