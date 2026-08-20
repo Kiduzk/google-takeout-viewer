@@ -5,8 +5,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from google_takeout_parser.path_dispatch import TakeoutParser
 from google_takeout_parser.models import Activity, CSVYoutubeComment, Keep
 from peewee import *
+import logging
 
 # Store database in user's home directory
+logger = logging.getLogger(__name__)
+
 db_path = Path.home() / ".google-takeout-viewer" / "parsed_takeout_data.db"
 db_path.parent.mkdir(parents=True, exist_ok=True)
 db = SqliteDatabase(str(db_path))
@@ -124,19 +127,34 @@ def parse_youtube_history(path):
             
         entry: Activity
 
-        # Skip adds, can be dded later if needed
-        if "From Google Ads" in entry.details:
+        # Safely extract details — some entries can be exception-like or missing attributes
+        details = None
+        try:
+            if hasattr(entry, "get"):
+                details = entry.get("details")
+        except Exception:
+            details = None
+        if details is None:
+            details = getattr(entry, "details", None)
+
+        if not isinstance(details, str):
+            # Unexpected entry shape — skip this entry but keep parsing the rest
+            logger.debug("Skipping youtube-history entry with no string details: %r", entry)
+            details = None
+
+        # Skip adds, can be added later if needed
+        if details and "From Google Ads" in details:
             continue
 
         history_data.append(
             {
                 "entryId": id,
-                "title": entry.title,
-                "description": entry.description,
-                "titleUrl": entry.titleUrl,
-                "details": entry.details,
-                "products": entry.products,
-                "time": entry.time,
+                "title": getattr(entry, "title", None),
+                "description": getattr(entry, "description", None),
+                "titleUrl": getattr(entry, "titleUrl", None),
+                "details": details,
+                "products": getattr(entry, "products", None),
+                "time": getattr(entry, "time", None),
             }
         )
         id += 1
